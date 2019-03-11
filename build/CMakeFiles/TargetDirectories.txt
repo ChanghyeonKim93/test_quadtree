@@ -1,0 +1,3 @@
+/home/icslkchlap/Documents/quadtree/build/CMakeFiles/edit_cache.dir
+/home/icslkchlap/Documents/quadtree/build/CMakeFiles/rebuild_cache.dir
+/home/icslkchlap/Documents/quadtree/build/CMakeFiles/quadtree.dir

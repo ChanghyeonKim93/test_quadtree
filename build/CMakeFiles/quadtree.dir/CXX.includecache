@@ -1,0 +1,36 @@
+#IncludeRegexLine: ^[ 	]*#[ 	]*(include|import)[ 	]*[<"]([^">]+)([">])
+
+#IncludeRegexScan: ^.*$
+
+#IncludeRegexComplain: ^$
+
+#IncludeRegexTransform: 
+
+/home/icslkchlap/Documents/quadtree/Quadtree.h
+iostream
+-
+cmath
+-
+vector
+-
+
+/home/icslkchlap/Documents/quadtree/main.cpp
+iostream
+-
+cmath
+-
+stdio.h
+-
+stdlib.h
+-
+vector
+-
+random
+-
+ctime
+-
+functional
+-
+Quadtree.h
+/home/icslkchlap/Documents/quadtree/Quadtree.h
+
