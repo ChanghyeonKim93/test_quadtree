@@ -1,1 +1,0 @@
-/usr/bin/c++    -std=c++11   CMakeFiles/quadtree.dir/main.cpp.o  -o quadtree -rdynamic 
