@@ -184,35 +184,168 @@ inline uint32_t Quadtree::getMyQuadrant(const uint32_t& id_node){
 
 
 /*
-    NNSearch(id_node, x, y);
+    NNSearch(0, x, y);
 
-    1. 입력 노드에서 가장 가까운 점을 찾음.
-    2. BWBTest == true 일 때 까지 Parent로 올라감. (Ball Within Bound)
-    3. query point를 포함하는 node로 찾아내려간다.
-    4. 최종 도달한 node에서 다시 최근접점을 탐색한다.
+    while(stack.size() > 0){
+        id_node = stack.top();
+        stack.pop();
+        QuadNode& nd = nodes[id_node];
+        QuadElements& nd_elems = node_elements[id_node];
+        // If leaf node, find nearest point
+        if(nd.isLeaf()){
+            ++total_access;
+            findNearestElem(nd_elems, x, y, id_node_matched);
+            if( BWBTest(nd, x, y) ) break; // the nearest point is inside the node.
+        }
+        else{ // this is not a leaf node.
+            // if BOB is not satisfied, dont go to the child
+            if( BOBTest(nd, x, y)){
+                ++total_access;
+                // Ball is overlaped to this node.
+
+                // Go to child. Find most probable child first.
+                for(int i = 1; i <= 4; ++i){
+                    id_child = (id_node << 2) + i;
+                    stack.push(id_child);
+                }
+            }
+        }
+    }
+
+    stack.clear();
+    return id_elem_matched;
+
 */
 
-// QuadNodeList Quadtree::findAllLeaves(){
-    
-//     QuadNodeList leaves, to_process;
-//     to_process.push_back(nodes[0]);
+/*
+    NNSearchCached(id_node, x, y);
+    QuadNode& nd = nodes[id_node]; // start node. (cached)
 
-//     while(to_process.size() > 0){
-//         const QuadNode nd = (const QuadNode)to_process.back();
-//         to_process.pop_back();
+    if(id_node == 0) NNSearch(x,y);
+    else{
+        // Find nearest point in the cached node.
+        findNearestElem(nd_elems, x, y, id_node_matched);
+        if( BWBTest(nd,x,y) ) break;
+    }
 
-//         // If this node is a leaf, insert it to the list
-//         if(nodes[nd.index].count != -1){ // 
-//             leaves.push_back(nd);
-//         }
-//         else{
-//             // Otherwise push the children that intersect the rectangle.
+    // Go up to the BWBTest == true
+    id_node = getParentNodeID(id_node);
+    while(true){
+        if(inBound(node,x,y)) break;
 
-//             nd.
-//         }
-//     }
+        if(id_node == 0) break; // Root
+        id_node = getParentNodeID(id_node);
+        ++total_access;
+    }
 
-//     return leaves;
-// };
+    // From the current node, search !
+    stack.push(id_node);
+    while(stack.size() > 0){
+        nd = nodes[stack.top()];
+        stack.pop();
+
+        if(nd.isLeaf()){
+            ++total_access;
+            findNearestElem();
+            if(inBound(nd, x,y) && BWBTest(nd, x, y)) goto finish;
+        }
+        else{
+            if(BOBTest(nd, x,y)){
+                ++total_access;
+                // Ball is overlaped to this node.
+
+                // Go to child. Find most probable child first.
+                for(int i = 1; i <= 4; ++i){
+                    id_child = (id_node << 2) + i;
+                    stack.push(id_child);
+                }
+            }
+        }
+    }
+
+finish:
+    stack.clear();
+    return id_elem_matched;
+
+*/
 
 
+/*
+    BWBTest(id_node,x,y){
+        if(id_node == 0) return true;
+
+        double d_hori, d_vert;
+        if (nd_->bound.nw.u == 0)
+            d_hori = (double)nd_->bound.se.u - pt_q_.u;
+        else if (nd_->bound.se.u == this->width)
+            d_hori = pt_q_.u - (double)nd_->bound.nw.u;
+        else
+            d_hori = (double)nd_->bound.se.u - pt_q_.u < pt_q_.u - (double)nd_->bound.nw.u
+            ? (double)nd_->bound.se.u - pt_q_.u : pt_q_.u - (double)nd_->bound.nw.u;
+
+        if (nd_->bound.nw.v == 0)
+            d_vert = nd_->bound.se.v - pt_q_.v;
+        else if (nd_->bound.se.v == this->height)
+            d_vert = pt_q_.v - nd_->bound.nw.v;
+        else
+            d_vert = (double)nd_->bound.se.v - pt_q_.v < pt_q_.v - (double)nd_->bound.nw.v
+            ? (double)nd_->bound.se.v - pt_q_.v : pt_q_.v - (double)nd_->bound.nw.v;
+
+        double d_min = d_hori < d_vert ? d_hori : d_vert;
+        // std::cout << "a,b,c,d: " << d_a << ", " << d_b << ", " << d_c << ", " << d_d << std::endl;
+        return (*this->min_dist*scale2 < d_min*d_min);
+    }
+*/
+
+
+/*
+bool QuadTreeFastPooled::BOBTest(Node*& nd_, Point2<double>& pt_q_) {
+	// 좌
+	double min_dist_scale = *this->min_dist*scale2;
+	if (pt_q_.u < nd_->bound.nw.u)
+		// 좌상
+		if (pt_q_.v < nd_->bound.nw.v)
+			return min_dist_scale >
+			(pt_q_.u - nd_->bound.nw.u)*(pt_q_.u - nd_->bound.nw.u)
+			+ (pt_q_.v - nd_->bound.nw.v)*(pt_q_.v - nd_->bound.nw.v);
+	// 좌중
+		else if (pt_q_.v < nd_->bound.se.v)
+			return min_dist_scale >
+			(pt_q_.u - nd_->bound.nw.u)*(pt_q_.u - nd_->bound.nw.u);
+	// 좌하
+		else
+			return min_dist_scale >
+			(pt_q_.u - nd_->bound.nw.u)*(pt_q_.u - nd_->bound.nw.u)
+			+ (pt_q_.v - nd_->bound.se.v)*(pt_q_.v - nd_->bound.se.v);
+	// 중
+	else if (pt_q_.u < nd_->bound.se.u)
+		// 중상
+		if (pt_q_.v < nd_->bound.nw.v)
+			return min_dist_scale >
+			(pt_q_.v - nd_->bound.nw.v)*(pt_q_.v - nd_->bound.nw.v);
+	// 중중은 없다.
+		else if (pt_q_.v < nd_->bound.se.v)
+			return true;
+	// 중하
+		else
+			return min_dist_scale >
+			(pt_q_.v - nd_->bound.se.v)*(pt_q_.v - nd_->bound.se.v);
+	// 우
+	else
+		// 우상
+		if (pt_q_.v < nd_->bound.nw.v)
+			return min_dist_scale >
+			(pt_q_.u - nd_->bound.se.u)*(pt_q_.u - nd_->bound.se.u)
+			+ (pt_q_.v - nd_->bound.nw.v)*(pt_q_.v - nd_->bound.nw.v);
+	// 우중
+		else if (pt_q_.v < nd_->bound.se.v)
+			return min_dist_scale >
+			(pt_q_.u - nd_->bound.se.u)*(pt_q_.u - nd_->bound.se.u);
+	// 우하
+		else
+			return min_dist_scale >
+			(pt_q_.u - nd_->bound.se.u)*(pt_q_.u - nd_->bound.se.u)
+			+ (pt_q_.v - nd_->bound.se.v)*(pt_q_.v - nd_->bound.se.v);
+};
+
+*/
