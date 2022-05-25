@@ -23,7 +23,7 @@ int main() {
 
     float x_range[2] = {0,1032};
     float y_range[2] = {0,772};
-    uint32_t max_depth = 12;
+    uint32_t max_depth = 7;
 
     try{
         std::shared_ptr<Quadtree> qt = nullptr;

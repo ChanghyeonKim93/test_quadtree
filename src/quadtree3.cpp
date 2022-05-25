@@ -1,10 +1,8 @@
 #include "quadtree3.h"
 
 Quadtree::Quadtree(
-    const float& x_min,
-    const float& x_max,
-    const float& y_min,
-    const float& y_max,
+    const float& x_min, const float& x_max,
+    const float& y_min, const float& y_max,
     const uint32_t& max_depth)
 : max_depth_(max_depth), x_range_{x_min,x_max}, y_range_{y_min,y_max}
 {
@@ -12,12 +10,13 @@ Quadtree::Quadtree(
     // Max depth and normalized tree size 
     root_rect.tl = PosUint32t(0,0);
     root_rect.br = PosUint32t(std::pow(2, max_depth_-1),std::pow(2, max_depth_-1));
-    std::cout << root_rect << std::endl;
+    std::cout << "grid size: " << root_rect <<std::endl;
 
     // Normalizer
     x_normalizer_ = root_rect.br.x/(x_range_[1]-x_range_[0]);
     y_normalizer_ = root_rect.br.y/(y_range_[1]-y_range_[0]);
     std::cout << "xy normalizer : " << x_normalizer_<<"," <<y_normalizer_<<std::endl;
+    std::cout << "xy grid size : " << 1./x_normalizer_<<"," <<1./y_normalizer_<<std::endl;
         
     // Make nodes
     nodes.resize(1*(std::pow(4,max_depth_)-1)/3);
@@ -40,8 +39,9 @@ void Quadtree::insert(const int32_t& data_id, const float& x, const float& y){
     {
         float x_nom = x*x_normalizer_;
         float y_nom = y*y_normalizer_;
+#ifndef VERBOSE_
         std::cout << "\n======== insert [" << x_nom << "," << y_nom << "] ========\n"; 
-
+#endif
         this->insertPrivate(0, root_rect, data_id, x_nom, y_nom, 0);
     }
     else throw std::runtime_error("out of quadtree range.");
@@ -58,13 +58,15 @@ void Quadtree::insertPrivate(
         if(nd.isLeaf()) { 
             // This is a leaf node.
             addDataToNode(id_node, id_data, x, y);
-
+#ifndef VERBOSE_
             std::cout << "[nonmax leaf] ndid: " << id_node <<", depth:" << depth <<", # elem: " << nd.count <<", " <<getNumElemOfNode(id_node) << "\n";
-            
+#endif
+
             int n_elem = getNumElemOfNode(id_node);
             if(n_elem > max_elem_per_leaf_){ // too much data. divide.
+#ifndef VERBOSE_
                 std::cout <<" --- TOO MUCH DATA... divide! # elem: " << n_elem << "\n";
-                
+#endif
                 // Make all child to leaf
                 for(int i = 1; i <= 4; ++i) nodes[(id_node << 2)+i].makeLeaf();
                 
@@ -74,20 +76,24 @@ void Quadtree::insertPrivate(
 
                     uint32_t id_quadrant = getQuadrant(elem.x_nom, elem.y_nom, qrect);
                     uint32_t id_child = (id_node << 2) + id_quadrant;
-                    
+#ifndef VERBOSE_
                     std::cout <<" --- --- " << i <<"-th elem goes from [" << id_node <<"] to [" << id_child <<"]\n";
-
+#endif
 
                     QuadRect qrect_child = getQuadrantRect(id_quadrant, qrect);
                     insertPrivate(id_child, qrect_child, id_data, elem.x_nom, elem.y_nom, depth + 1);
                 }
                 //make node branch
                 makeBranch(id_node);
+#ifndef VERBOSE_
                 std::cout <<" --- division of [" << id_node << "]: " << nd.count << std::endl;
+#endif
             }
         }
         else{
+#ifndef VERBOSE_
             std::cout << "[     branch] ndid: " << id_node <<", depth:" << depth <<"\n";
+#endif
             // this might be a branch or uninitialized one.
             // Traverse.
             uint32_t id_quadrant = getQuadrant(x,y,qrect);
@@ -105,13 +111,15 @@ void Quadtree::insertPrivate(
         
         // Add data_id 
         addDataToNode(id_node, id_data, x, y);
+#ifndef VERBOSE_
         std::cout << "[   MAX leaf] ndid: " << id_node <<", depth:" << depth <<", # elem: " << nd.count  <<"\n";
+#endif
     }
 };
 
 inline uint32_t Quadtree::getQuadrant(const float& x, const float& y, const QuadRect& qrect){
-    float cent_x = (float)((qrect.tl.x+qrect.br.x)>>1);
-    float cent_y = (float)((qrect.tl.y+qrect.br.y)>>1);
+    float cent_x = (float)((qrect.tl.x + qrect.br.x) >> 1);
+    float cent_y = (float)((qrect.tl.y + qrect.br.y) >> 1);
     if(x < cent_x) {
         if(y < cent_y) return 1; // 1 (tl)
         else return 2; // 2 (bl)
@@ -130,6 +138,7 @@ inline void Quadtree::addDataToNode(const uint32_t& id_node, const int& id_data,
 inline int Quadtree::getNumElemOfNode(const uint32_t& id_node){
     return node_elements[id_node].elems.size();
 };
+
 inline QuadRect Quadtree::getQuadrantRect(const uint32_t& id_quadrant, const QuadRect& qrect){
     QuadRect qrect_child;
     uint32_t cent_x = (uint32_t)((qrect.tl.x+qrect.br.x)>>1);
@@ -163,6 +172,25 @@ inline void Quadtree::makeBranch(const uint32_t& id_node){
     nodes[id_node].makeBranch();
     node_elements[id_node].reset();
 };
+
+
+inline uint32_t Quadtree::getParentID(const uint32_t& id_node){
+    return (id_node >> 2);
+};
+
+inline uint32_t Quadtree::getMyQuadrant(const uint32_t& id_node){
+    return (id_node % 4);
+};
+
+
+/*
+    NNSearch(id_node, x, y);
+
+    1. 입력 노드에서 가장 가까운 점을 찾음.
+    2. BWBTest == true 일 때 까지 Parent로 올라감. (Ball Within Bound)
+    3. query point를 포함하는 node로 찾아내려간다.
+    4. 최종 도달한 node에서 다시 최근접점을 탐색한다.
+*/
 
 // QuadNodeList Quadtree::findAllLeaves(){
     

@@ -1,0 +1,101 @@
+function [pt_start_update, pt_end_update] = testBoundary(pt_start, pt_end, n_rows, n_cols)
+persistent NW NE SW SE
+if(isempty(NW))
+   NW = [0,0]';
+   NE = [n_cols,0]';
+   SW = [0,n_rows]';
+   SE = [n_cols,n_rows]';
+end
+% 점들이 내부에 존재하는지 판단.
+% 점 2개 내부: 아무것도 할 필요 X
+% 점 1개 내부: 1개의 절편 탐색 -> pt_end가 내부인 경우 vs. 밖인 경우,
+% 점 0개 내부: 0개의 절편 or 2개의 절편 존재.
+in_pt_start = false;
+in_pt_end   = false;
+if(pt_start(1) > 0 && pt_start(1) < n_cols && pt_start(2) > 0 && pt_start(2) < n_rows)
+   in_pt_start = true;
+else
+   in_pt_start = false;
+end
+if(pt_end(1) > 0 && pt_end(1) < n_cols && pt_end(2) > 0 && pt_end(2) < n_rows)
+   in_pt_end = true;
+else
+   in_pt_end = false;
+end
+
+% 내부에 있는 점 갯수.
+in_count = in_pt_start + in_pt_end;
+if(in_count == 2) % 걍 나가라.
+   pt_start_update = pt_start;
+   pt_end_update   = pt_end;
+   
+elseif(in_count == 1) % pt_end가 내부인지 아닌지 판단해라.
+   vec_epi = pt_end - pt_start;
+   
+   vec_nw  = NW - pt_start;
+   vec_sw  = SW - pt_start;
+   vec_se  = SE - pt_start;
+   vec_ne  = NE - pt_start;
+   
+   s_nw = cross2d(vec_epi, vec_nw);
+   s_sw = cross2d(vec_epi, vec_sw);
+   s_se = cross2d(vec_epi, vec_se);
+   s_ne = cross2d(vec_epi, vec_ne);
+   
+   pt_update = zeros(2,1);
+   % 네 변의 touch 여부 결정. (외적 이용하면댐)
+   if(s_nw*s_sw < 0) % 좌측변 터치 여부 nw sw
+      pt_update(1) = 1;
+      pt_update(2) = 
+   elseif(s_ne*s_se < 0) % 우측변 터치 여부 ne se
+
+   elseif(s_nw*s_ne < 0) % 상단변 터치 여부 nw ne
+
+   elseif(s_sw*s_se < 0) % 하단변 터치 여부 sw se
+
+   end
+   if(in_pt_end > 0) % pt_end가 내부인 경우 -> pt_start를 업데이트
+      
+   else % pt_end가 내부가 아닌 경우. -> pt_end가 업데이트
+      
+   end
+else % 점 0개 내부.
+   vec_epi = pt_end - pt_start;
+   
+   vec_nw  = NW - pt_start;
+   vec_sw  = SW - pt_start;
+   vec_se  = SE - pt_start;
+   vec_ne  = NE - pt_start;
+   
+   s_nw = cross2d(vec_epi, vec_nw);
+   s_sw = cross2d(vec_epi, vec_sw);
+   s_se = cross2d(vec_epi, vec_se);
+   s_ne = cross2d(vec_epi, vec_ne);
+   
+   % 좌측변 터치 여부 nw sw
+   if(s_nw*s_sw < 0) % 터치함.
+      
+   else % 터치 안함.
+      
+   end
+   % 우측변 터치 여부 ne se
+   if(s_ne*s_se < 0) % 터치함.
+      
+   else % 터치 안함.
+      
+   end
+   
+   % 상단변 터치 여부 nw ne
+   if(s_nw*s_ne < 0) % 터치함.
+      
+   else % 터치 안함.
+      
+   end
+   % 하단변 터치 여부 sw se
+   if(s_sw*s_se < 0) % 터치함.
+      
+   else % 터치 안함.
+      
+   end
+end
+end

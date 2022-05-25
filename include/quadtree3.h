@@ -4,6 +4,8 @@
 #include <cmath>
 #include <vector>
 
+#define VERBOSE_
+
 enum State{
     UNKNOWN = -1,
     PARTIALLY_SEEN = 0,
@@ -131,6 +133,15 @@ private:
     inline int getNumElemOfNode(const uint32_t& id_node);
 
     inline void makeBranch(const uint32_t& id_node);
+
+private:
+    inline uint32_t getParentID(const uint32_t& id_node);
+    inline uint32_t getMyQuadrant(const uint32_t& id_node);
+
+// For NN search
+private:
+    inline bool inBoundary(const float& x, const float& y);
+    inline bool BWBTest( float dist);
 
 private:
     // Stores all the elements in the quadtree.
