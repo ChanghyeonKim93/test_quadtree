@@ -7,7 +7,7 @@ Quadtree::Quadtree(
 : max_depth_(max_depth), x_range_{x_min,x_max}, y_range_{y_min,y_max}
 {
     // Make nodes
-    nodes.resize(1 + 1*(std::pow(4,max_depth_)-1)/(4-1));
+    nodes.resize(1*(std::pow(4,max_depth_+1)-1)/(4-1));
     nodes[1].makeLeaf();
     std::cout << "# of nodes: " << nodes.size() << std::endl;
 

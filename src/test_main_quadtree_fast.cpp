@@ -28,7 +28,7 @@ int main() {
         
         std::vector<std::pair<float,float>> points;
         std::vector<uint32_t> ids_node_matched;
-        int n_pts = 5;
+        int n_pts = 500;
         for(int i = 0; i<n_pts;++i){
             points.push_back(std::make_pair<float,float>(generator(),generator()));
         }
