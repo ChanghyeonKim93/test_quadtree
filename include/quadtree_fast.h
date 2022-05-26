@@ -35,7 +35,7 @@ private:
             return *this;
         };
         friend std::ostream& operator<<(std::ostream& os, const Pos2d& c){
-            os << "["<< c.x <<"," << c.y <<"]\n";
+            os << "["<< c.x <<"," << c.y <<"]";
             return os;
         };
 
@@ -53,7 +53,7 @@ private:
         };
 
         friend std::ostream& operator<<(std::ostream& os, const QuadRect& c){
-            os << "tl:["<< c.tl.x <<"," << c.tl.y <<"],br:[" << c.br.x <<","<<c.br.y<<"]\n";
+            os << "tl:["<< c.tl.x <<"," << c.tl.y <<"],br:[" << c.br.x <<","<<c.br.y<<"]";
             return os;
         };
     };
@@ -75,7 +75,7 @@ private:
 
         QuadNode() : count(-2) {};
         friend std::ostream& operator<<(std::ostream& os, const QuadNode& c){
-            os << "count:[" << c.count <<"]\n";
+            os << "count:[" << c.count <<"]";
             return os;
         };
 
@@ -138,6 +138,7 @@ public:
 
     void insert(float x, float y, int id_data);
     ID NNSearch(float x, float y);
+    ID cachedNNSearch(float x, float y, int id_node_cached);
 
 // Related to generate tree.
 private:
@@ -152,13 +153,17 @@ private:
 
 // Related to NN search (private)
 private:
-    void NearestNeighborSearchPrivate(); // return id_data matched.
+    void nearestNeighborSearchPrivate(); // return id_data matched.
     
     inline bool inTreeBoundary(float x, float y);
     inline bool inBound( float x, float y, const QuadRect_u16& rect);
     inline bool BWBTest( float x, float y, const QuadRect_u16& rect, float radius); // Ball Within Bound
     inline bool BOBTest( float x, float y, const QuadRect_u16& rect, float radius); // Ball Overlap Bound
     bool findNearestElem(float x, float y, const QuadNodeElements& elems);
+
+// Related to cached NN search (private)
+private:
+    void cachedNearestNeighborSearchPrivate();
 
 private:
     // Stores all the elements in the quadtree.

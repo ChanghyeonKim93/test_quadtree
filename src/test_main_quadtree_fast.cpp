@@ -1,8 +1,5 @@
 #include <iostream>
 #include <memory>
-#include <cmath>
-#include <stdio.h>
-#include <stdlib.h>
 #include <vector>
 
 #include <random>
@@ -18,7 +15,7 @@ int main() {
 
     clock_t start, finish;
     std::mt19937 engine((unsigned int)time(NULL));
-    std::uniform_real_distribution<> distribution(100.0, 500.0);
+    std::uniform_real_distribution<> distribution(1.0, 771.0);
     auto generator = std::bind(distribution, engine);
 
     float x_range[2] = {0.f,1032.f};
@@ -29,18 +26,33 @@ int main() {
         std::shared_ptr<Quadtree> qt = nullptr;
         qt = std::make_shared<Quadtree>(x_range[0],x_range[1],y_range[0], y_range[1], max_depth);
         
-        qt->insert(1.64, 1.5, 0);
-        qt->insert(555.64, 555.5, 1);
-        qt->insert(1.64, 555.5, 2);
-        qt->insert(555.64, 1.5, 3);
+        std::vector<std::pair<float,float>> points;
+        std::vector<uint32_t> ids_node_matched;
+        int n_pts = 5;
+        for(int i = 0; i<n_pts;++i){
+            points.push_back(std::make_pair<float,float>(generator(),generator()));
+        }
+        ids_node_matched.resize(n_pts);
 
-        std::cout << "insert OK!" <<std::endl;
+        // Insert points
+        for(int i = 0; i < n_pts; ++i){
+            auto it = points[i];
+            qt->insert(it.first,it.second, i);
+        }
+        std::cout << "insert OK!\n\n\n" <<std::endl;
 
-        std::cout << "\n\n" << qt->NNSearch(1.6,1.4) << std::endl;
-        std::cout << "\n\n" << qt->NNSearch(555.5,555.4) << std::endl;
-        std::cout << "\n\n" << qt->NNSearch(1.6,555.4) << std::endl;
-        std::cout << "\n\n" << qt->NNSearch(555.4,1.4) << std::endl;
-        std::cout << "\n\n" << qt->NNSearch(222.4,1.4) << std::endl;
+        // Matching
+        for(int i = 0; i < n_pts; ++i){
+            ids_node_matched[i] = qt->NNSearch(points[i].first, points[i].second);
+        }
+        std::cout <<"Normal NN OK!\n\n\n" << std::endl;
+        
+        // cached Matching
+        for(int i = 0; i < n_pts; ++i){
+            ids_node_matched[i] = qt->cachedNNSearch(points[i].first, points[i].second, ids_node_matched[i]);
+        }
+        std::cout <<"Cached NN OK!\n\n\n" << std::endl;
+
     }
     catch (std::exception& e){
         std::cout <<"EXCEPTION: " << e.what() << std::endl;
