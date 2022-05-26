@@ -3,7 +3,7 @@
 Quadtree::Quadtree(
     float x_min, float x_max,
     float y_min, float y_max,
-    uint32_t max_depth)
+    uint32_t max_depth, uint32_t max_elem_per_leaf)
 : max_depth_(max_depth), x_range_{x_min,x_max}, y_range_{y_min,y_max}
 {
     // Make nodes
@@ -27,7 +27,7 @@ Quadtree::Quadtree(
     std::cout << "xy normalizer: " << x_normalizer_<<"," <<y_normalizer_<<std::endl;
     std::cout << "xy minimum grid size [px]: " << 1./x_normalizer_<<"," <<1./y_normalizer_<<std::endl;
         
-    max_elem_per_leaf_ = 1;
+    max_elem_per_leaf_ = max_elem_per_leaf;
 
     std::cout <<"sizeof QuadNode: " << sizeof(Quadtree::QuadNode) << std::endl;
 
@@ -438,6 +438,11 @@ ID Quadtree::NNSearch(float x, float y){
 #endif
     return query_data_.id_node_matched;
 };
+ID Quadtree::NNSearchDebug(float x, float y, uint32_t& n_access){
+    ID id_matched = NNSearch(x,y);
+    n_access = simple_stack_.getTotalAccess();
+    return id_matched;
+};
 
 ID Quadtree::cachedNNSearch(float x, float y, int id_node_cached){
     query_data_.x = x;
@@ -455,6 +460,12 @@ ID Quadtree::cachedNNSearch(float x, float y, int id_node_cached){
                             <<" / min dist: " << sqrt(query_data_.min_dist2_) << std::endl;
 #endif
     return query_data_.id_node_matched;
+};
+
+ID Quadtree::cachedNNSearchDebug(float x, float y, int id_node_cached, uint32_t& n_access){
+    ID id_matched = cachedNNSearch(x,y,id_node_cached);
+    n_access = simple_stack_.getTotalAccess();
+    return id_matched;
 };
 
 inline void Quadtree::resetInsertData(){

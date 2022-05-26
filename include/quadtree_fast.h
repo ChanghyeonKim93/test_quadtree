@@ -134,12 +134,15 @@ private:
     };
 
 public:
-    Quadtree(float x_min, float x_max, float y_min, float y_max, ID max_depth);
+    Quadtree(float x_min, float x_max, float y_min, float y_max, uint32_t max_depth, uint32_t max_elem_per_leaf);
     ~Quadtree();
 
     void insert(float x, float y, int id_data);
     ID NNSearch(float x, float y);
     ID cachedNNSearch(float x, float y, int id_node_cached);
+    
+    ID NNSearchDebug(float x, float y, uint32_t& n_access);
+    ID cachedNNSearchDebug(float x, float y, int id_node_cached, uint32_t& n_access);
 
 // Related to generate tree.
 private:
