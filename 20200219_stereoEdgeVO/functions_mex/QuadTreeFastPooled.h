@@ -470,7 +470,7 @@ void QuadTreeFastPooled::findNearestElem(Node*& nd_, Point2<double>& pt_q_, int&
 };
 
 // node 내부에 query 점과 현재 min_dist로 이루어진 원이 들어오는지?
-bool QuadTreeFastPooled::BWBTest(Node*& nd_, Elem*& elem_q_) {
+bool QuadTreeFastPooled::BWBTest(Node*& nd_, Elem*& elem_q_) { 
 	if (nd_->parent == nullptr) return true;
 	double d_hori, d_vert;
 	if (nd_->bound.nw.u == 0)

@@ -48,24 +48,13 @@ RM = /usr/bin/cmake -E remove -f
 EQUALS = =
 
 # The top-level source directory on which CMake was run.
-CMAKE_SOURCE_DIR = /home/larr/Documents/quadtree
+CMAKE_SOURCE_DIR = /home/larrkchdesk/Documents/quadtree
 
 # The top-level build directory on which CMake was run.
-CMAKE_BINARY_DIR = /home/larr/Documents/quadtree/build
+CMAKE_BINARY_DIR = /home/larrkchdesk/Documents/quadtree/build
 
 #=============================================================================
 # Targets provided globally by CMake.
-
-# Special rule for the target edit_cache
-edit_cache:
-	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --cyan "No interactive CMake dialog available..."
-	/usr/bin/cmake -E echo No\ interactive\ CMake\ dialog\ available.
-.PHONY : edit_cache
-
-# Special rule for the target edit_cache
-edit_cache/fast: edit_cache
-
-.PHONY : edit_cache/fast
 
 # Special rule for the target rebuild_cache
 rebuild_cache:
@@ -78,11 +67,22 @@ rebuild_cache/fast: rebuild_cache
 
 .PHONY : rebuild_cache/fast
 
+# Special rule for the target edit_cache
+edit_cache:
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --cyan "No interactive CMake dialog available..."
+	/usr/bin/cmake -E echo No\ interactive\ CMake\ dialog\ available.
+.PHONY : edit_cache
+
+# Special rule for the target edit_cache
+edit_cache/fast: edit_cache
+
+.PHONY : edit_cache/fast
+
 # The main all target
 all: cmake_check_build_system
-	$(CMAKE_COMMAND) -E cmake_progress_start /home/larr/Documents/quadtree/build/CMakeFiles /home/larr/Documents/quadtree/build/CMakeFiles/progress.marks
+	$(CMAKE_COMMAND) -E cmake_progress_start /home/larrkchdesk/Documents/quadtree/build/CMakeFiles /home/larrkchdesk/Documents/quadtree/build/CMakeFiles/progress.marks
 	$(MAKE) -f CMakeFiles/Makefile2 all
-	$(CMAKE_COMMAND) -E cmake_progress_start /home/larr/Documents/quadtree/build/CMakeFiles 0
+	$(CMAKE_COMMAND) -E cmake_progress_start /home/larrkchdesk/Documents/quadtree/build/CMakeFiles 0
 .PHONY : all
 
 # The main clean target
@@ -111,71 +111,71 @@ depend:
 .PHONY : depend
 
 #=============================================================================
-# Target rules for targets named test_quadtree3
+# Target rules for targets named test_quadtree
 
 # Build rule for target.
-test_quadtree3: cmake_check_build_system
-	$(MAKE) -f CMakeFiles/Makefile2 test_quadtree3
-.PHONY : test_quadtree3
+test_quadtree: cmake_check_build_system
+	$(MAKE) -f CMakeFiles/Makefile2 test_quadtree
+.PHONY : test_quadtree
 
 # fast build rule for target.
-test_quadtree3/fast:
-	$(MAKE) -f CMakeFiles/test_quadtree3.dir/build.make CMakeFiles/test_quadtree3.dir/build
-.PHONY : test_quadtree3/fast
+test_quadtree/fast:
+	$(MAKE) -f CMakeFiles/test_quadtree.dir/build.make CMakeFiles/test_quadtree.dir/build
+.PHONY : test_quadtree/fast
 
-src/quadtree3.o: src/quadtree3.cpp.o
+src/quadtree_fast.o: src/quadtree_fast.cpp.o
 
-.PHONY : src/quadtree3.o
-
-# target to build an object file
-src/quadtree3.cpp.o:
-	$(MAKE) -f CMakeFiles/test_quadtree3.dir/build.make CMakeFiles/test_quadtree3.dir/src/quadtree3.cpp.o
-.PHONY : src/quadtree3.cpp.o
-
-src/quadtree3.i: src/quadtree3.cpp.i
-
-.PHONY : src/quadtree3.i
-
-# target to preprocess a source file
-src/quadtree3.cpp.i:
-	$(MAKE) -f CMakeFiles/test_quadtree3.dir/build.make CMakeFiles/test_quadtree3.dir/src/quadtree3.cpp.i
-.PHONY : src/quadtree3.cpp.i
-
-src/quadtree3.s: src/quadtree3.cpp.s
-
-.PHONY : src/quadtree3.s
-
-# target to generate assembly for a file
-src/quadtree3.cpp.s:
-	$(MAKE) -f CMakeFiles/test_quadtree3.dir/build.make CMakeFiles/test_quadtree3.dir/src/quadtree3.cpp.s
-.PHONY : src/quadtree3.cpp.s
-
-src/test_main_quadtree3.o: src/test_main_quadtree3.cpp.o
-
-.PHONY : src/test_main_quadtree3.o
+.PHONY : src/quadtree_fast.o
 
 # target to build an object file
-src/test_main_quadtree3.cpp.o:
-	$(MAKE) -f CMakeFiles/test_quadtree3.dir/build.make CMakeFiles/test_quadtree3.dir/src/test_main_quadtree3.cpp.o
-.PHONY : src/test_main_quadtree3.cpp.o
+src/quadtree_fast.cpp.o:
+	$(MAKE) -f CMakeFiles/test_quadtree.dir/build.make CMakeFiles/test_quadtree.dir/src/quadtree_fast.cpp.o
+.PHONY : src/quadtree_fast.cpp.o
 
-src/test_main_quadtree3.i: src/test_main_quadtree3.cpp.i
+src/quadtree_fast.i: src/quadtree_fast.cpp.i
 
-.PHONY : src/test_main_quadtree3.i
+.PHONY : src/quadtree_fast.i
 
 # target to preprocess a source file
-src/test_main_quadtree3.cpp.i:
-	$(MAKE) -f CMakeFiles/test_quadtree3.dir/build.make CMakeFiles/test_quadtree3.dir/src/test_main_quadtree3.cpp.i
-.PHONY : src/test_main_quadtree3.cpp.i
+src/quadtree_fast.cpp.i:
+	$(MAKE) -f CMakeFiles/test_quadtree.dir/build.make CMakeFiles/test_quadtree.dir/src/quadtree_fast.cpp.i
+.PHONY : src/quadtree_fast.cpp.i
 
-src/test_main_quadtree3.s: src/test_main_quadtree3.cpp.s
+src/quadtree_fast.s: src/quadtree_fast.cpp.s
 
-.PHONY : src/test_main_quadtree3.s
+.PHONY : src/quadtree_fast.s
 
 # target to generate assembly for a file
-src/test_main_quadtree3.cpp.s:
-	$(MAKE) -f CMakeFiles/test_quadtree3.dir/build.make CMakeFiles/test_quadtree3.dir/src/test_main_quadtree3.cpp.s
-.PHONY : src/test_main_quadtree3.cpp.s
+src/quadtree_fast.cpp.s:
+	$(MAKE) -f CMakeFiles/test_quadtree.dir/build.make CMakeFiles/test_quadtree.dir/src/quadtree_fast.cpp.s
+.PHONY : src/quadtree_fast.cpp.s
+
+src/test_main_quadtree_fast.o: src/test_main_quadtree_fast.cpp.o
+
+.PHONY : src/test_main_quadtree_fast.o
+
+# target to build an object file
+src/test_main_quadtree_fast.cpp.o:
+	$(MAKE) -f CMakeFiles/test_quadtree.dir/build.make CMakeFiles/test_quadtree.dir/src/test_main_quadtree_fast.cpp.o
+.PHONY : src/test_main_quadtree_fast.cpp.o
+
+src/test_main_quadtree_fast.i: src/test_main_quadtree_fast.cpp.i
+
+.PHONY : src/test_main_quadtree_fast.i
+
+# target to preprocess a source file
+src/test_main_quadtree_fast.cpp.i:
+	$(MAKE) -f CMakeFiles/test_quadtree.dir/build.make CMakeFiles/test_quadtree.dir/src/test_main_quadtree_fast.cpp.i
+.PHONY : src/test_main_quadtree_fast.cpp.i
+
+src/test_main_quadtree_fast.s: src/test_main_quadtree_fast.cpp.s
+
+.PHONY : src/test_main_quadtree_fast.s
+
+# target to generate assembly for a file
+src/test_main_quadtree_fast.cpp.s:
+	$(MAKE) -f CMakeFiles/test_quadtree.dir/build.make CMakeFiles/test_quadtree.dir/src/test_main_quadtree_fast.cpp.s
+.PHONY : src/test_main_quadtree_fast.cpp.s
 
 # Help Target
 help:
@@ -183,15 +183,15 @@ help:
 	@echo "... all (the default if no target is provided)"
 	@echo "... clean"
 	@echo "... depend"
-	@echo "... edit_cache"
 	@echo "... rebuild_cache"
-	@echo "... test_quadtree3"
-	@echo "... src/quadtree3.o"
-	@echo "... src/quadtree3.i"
-	@echo "... src/quadtree3.s"
-	@echo "... src/test_main_quadtree3.o"
-	@echo "... src/test_main_quadtree3.i"
-	@echo "... src/test_main_quadtree3.s"
+	@echo "... edit_cache"
+	@echo "... test_quadtree"
+	@echo "... src/quadtree_fast.o"
+	@echo "... src/quadtree_fast.i"
+	@echo "... src/quadtree_fast.s"
+	@echo "... src/test_main_quadtree_fast.o"
+	@echo "... src/test_main_quadtree_fast.i"
+	@echo "... src/test_main_quadtree_fast.s"
 .PHONY : help
 
 

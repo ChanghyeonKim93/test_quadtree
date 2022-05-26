@@ -9,7 +9,7 @@
 #include <ctime>
 #include <functional>
 
-#include "quadtree3.h"
+#include "quadtree_fast.h"
 
 void print_start();
 
@@ -21,19 +21,26 @@ int main() {
     std::uniform_real_distribution<> distribution(100.0, 500.0);
     auto generator = std::bind(distribution, engine);
 
-    float x_range[2] = {0,1032};
-    float y_range[2] = {0,772};
+    float x_range[2] = {0.f,1032.f};
+    float y_range[2] = {0.f,772.f};
     uint32_t max_depth = 7;
 
     try{
         std::shared_ptr<Quadtree> qt = nullptr;
         qt = std::make_shared<Quadtree>(x_range[0],x_range[1],y_range[0], y_range[1], max_depth);
         
-        qt->insert(0, 1.64, 1.5);
-        qt->insert(0, 1.64, 1.5);
-        qt->insert(1, 555.64, 555.5);
-        qt->insert(2, 1.64, 555.5);
-        qt->insert(3, 555.64, 1.5);
+        qt->insert(1.64, 1.5, 0);
+        qt->insert(555.64, 555.5, 1);
+        qt->insert(1.64, 555.5, 2);
+        qt->insert(555.64, 1.5, 3);
+
+        std::cout << "insert OK!" <<std::endl;
+
+        std::cout << "\n\n" << qt->NNSearch(1.6,1.4) << std::endl;
+        std::cout << "\n\n" << qt->NNSearch(555.5,555.4) << std::endl;
+        std::cout << "\n\n" << qt->NNSearch(1.6,555.4) << std::endl;
+        std::cout << "\n\n" << qt->NNSearch(555.4,1.4) << std::endl;
+        std::cout << "\n\n" << qt->NNSearch(222.4,1.4) << std::endl;
     }
     catch (std::exception& e){
         std::cout <<"EXCEPTION: " << e.what() << std::endl;

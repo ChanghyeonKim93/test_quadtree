@@ -1,4 +1,4 @@
-# Install script for directory: /home/larr/Documents/quadtree
+# Install script for directory: /home/larrkchdesk/Documents/quadtree
 
 # Set the install prefix
 if(NOT DEFINED CMAKE_INSTALL_PREFIX)
@@ -45,5 +45,5 @@ endif()
 
 string(REPLACE ";" "\n" CMAKE_INSTALL_MANIFEST_CONTENT
        "${CMAKE_INSTALL_MANIFEST_FILES}")
-file(WRITE "/home/larr/Documents/quadtree/build/${CMAKE_INSTALL_MANIFEST}"
+file(WRITE "/home/larrkchdesk/Documents/quadtree/build/${CMAKE_INSTALL_MANIFEST}"
      "${CMAKE_INSTALL_MANIFEST_CONTENT}")

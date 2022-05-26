@@ -10,8 +10,8 @@ set(includeDirs ${includeDirs} include)
 include_directories( ${includeDirs} )
 
 set(SRC ${SRC} 
-    src/quadtree3.cpp
+    src/quadtree_fast.cpp
 )
 
-add_executable (test_quadtree3 ${SRC} src/test_main_quadtree3.cpp)
+add_executable (test_quadtree ${SRC} src/test_main_quadtree_fast.cpp)
 # target_link_libraries (test_quadtree ${OpenCV_LIBRARIES})
