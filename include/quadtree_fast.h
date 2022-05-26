@@ -6,7 +6,7 @@
 #include "simple_stack.h"
 #include "macros.h"
 
-#define VERBOSE_
+// #define VERBOSE_
 
 typedef uint32_t ID; // 4 bytes
 typedef uint8_t  Flag; // 1 bytes

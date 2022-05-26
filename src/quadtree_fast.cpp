@@ -40,7 +40,7 @@ void Quadtree::insert(float x, float y, int id_data){
     &&  y > y_range_[0] && y < y_range_[1] )
     {
         float x_nom = x*x_normalizer_; float y_nom = y*y_normalizer_;
-#ifndef VERBOSE_
+#ifdef VERBOSE_
         std::cout << "\n======== insert [" << x_nom << "," << y_nom << "] ========\n"; 
 #endif
   
@@ -252,7 +252,9 @@ void Quadtree::nearestNeighborSearchPrivate(){
             }
         }
     }
-        std::cout <<"\n --- statistics - # access nodes: " << simple_stack_.getTotalAccess() << std::endl;
+#ifdef VERBOSE_
+    std::cout <<"\n --- statistics - # access nodes: " << simple_stack_.getTotalAccess() << std::endl;
+#endif
 };
 
 
@@ -303,7 +305,9 @@ void Quadtree::cachedNearestNeighborSearchPrivate(){
         findNearestElem(x_nom, y_nom, nd_elems);
         if( BWBTest(x_nom, y_nom, nd.rect, sqrt(min_dist2_)) ) {
             // the nearest point is inside the cached node.
+#ifdef VERBOSE_
             std::cout <<"\n --- statistics (cached) - # access nodes: " << simple_stack_.getTotalAccess() << std::endl;
+#endif
             return;
         } 
 
@@ -354,7 +358,9 @@ void Quadtree::cachedNearestNeighborSearchPrivate(){
                 }
             }
         }
+#ifdef VERBOSE_
         std::cout <<"\n --- statistics (cached) - # access nodes: " << simple_stack_.getTotalAccess() << std::endl;
+#endif
     }
 };
 
@@ -369,12 +375,12 @@ ID Quadtree::NNSearch(float x, float y){
     // query_data_.id_node_cached = 0; // non-cached case now.
     
     nearestNeighborSearchPrivate();
-
+#ifdef VERBOSE_
     std::cout << "Query, matched: [" << query_data_.x_nom << "," << query_data_.y_nom << "] / [";
     std::cout << all_elems_[query_data_.id_elem_matched].x_nom
                             <<"," << all_elems_[query_data_.id_elem_matched].y_nom <<"]"
                             <<" / min dist: " << sqrt(query_data_.min_dist2_) << std::endl;
-
+#endif
     return query_data_.id_node_matched;
 };
 
@@ -387,11 +393,12 @@ ID Quadtree::cachedNNSearch(float x, float y, int id_node_cached){
     
     cachedNearestNeighborSearchPrivate();
 
+#ifdef VERBOSE_
     std::cout << "Query, matched: [" << query_data_.x_nom << "," << query_data_.y_nom << "] / [";
     std::cout << all_elems_[query_data_.id_elem_matched].x_nom
                             <<"," << all_elems_[query_data_.id_elem_matched].y_nom <<"]"
                             <<" / min dist: " << sqrt(query_data_.min_dist2_) << std::endl;
-
+#endif
     return query_data_.id_node_matched;
 };
 
@@ -412,136 +419,3 @@ inline void Quadtree::resetQueryData(){
     query_data_.x_nom = -1.0f;
     query_data_.y_nom = -1.0f;   
 };
-
-/*
-    NNSearchCached(id_node, x, y);
-    QuadNode& nd = nodes[id_node]; // start node. (cached)
-
-    if(id_node == 0) NNSearch(x,y);
-    else{
-        // Find nearest point in the cached node.
-        findNearestElem(nd_elems, x, y, id_node_matched);
-        if( BWBTest(nd,x,y) ) break;
-    }
-
-    // Go up to the BWBTest == true
-    id_node = getParentNodeID(id_node);
-    while(true){
-        if(inBound(node,x,y)) break;
-
-        if(id_node == 0) break; // Root
-        id_node = getParentNodeID(id_node);
-        ++total_access;
-    }
-
-    // From the current node, search !
-    stack.push(id_node);
-    while(stack.size() > 0){
-        nd = nodes[stack.top()];
-        stack.pop();
-
-        if(nd.isLeaf()){
-            ++total_access;
-            findNearestElem();
-            if(inBound(nd, x,y) && BWBTest(nd, x, y)) goto finish;
-        }
-        else{
-            if(BOBTest(nd, x,y)){
-                ++total_access;
-                // Ball is overlaped to this node.
-
-                // Go to child. Find most probable child first.
-                for(int i = 1; i <= 4; ++i){
-                    id_child = (id_node << 2) + i;
-                    stack.push(id_child);
-                }
-            }
-        }
-    }
-
-finish:
-    stack.clear();
-    return id_elem_matched;
-
-*/
-
-
-/*
-    BWBTest(id_node,x,y){
-        if(id_node == 0) return true;
-
-        double d_hori, d_vert;
-        if (nd_->bound.nw.u == 0)
-            d_hori = (double)nd_->bound.se.u - pt_q_.u;
-        else if (nd_->bound.se.u == this->width)
-            d_hori = pt_q_.u - (double)nd_->bound.nw.u;
-        else
-            d_hori = (double)nd_->bound.se.u - pt_q_.u < pt_q_.u - (double)nd_->bound.nw.u
-            ? (double)nd_->bound.se.u - pt_q_.u : pt_q_.u - (double)nd_->bound.nw.u;
-
-        if (nd_->bound.nw.v == 0)
-            d_vert = nd_->bound.se.v - pt_q_.v;
-        else if (nd_->bound.se.v == this->height)
-            d_vert = pt_q_.v - nd_->bound.nw.v;
-        else
-            d_vert = (double)nd_->bound.se.v - pt_q_.v < pt_q_.v - (double)nd_->bound.nw.v
-            ? (double)nd_->bound.se.v - pt_q_.v : pt_q_.v - (double)nd_->bound.nw.v;
-
-        double d_min = d_hori < d_vert ? d_hori : d_vert;
-        // std::cout << "a,b,c,d: " << d_a << ", " << d_b << ", " << d_c << ", " << d_d << std::endl;
-        return (*this->min_dist*scale2 < d_min*d_min);
-    }
-*/
-
-
-/*
-bool QuadTreeFastPooled::BOBTest(Node*& nd_, Point2<double>& pt_q_) {
-	// 좌
-	double min_dist_scale = *this->min_dist*scale2;
-	if (pt_q_.u < nd_->bound.nw.u)
-		// 좌상
-		if (pt_q_.v < nd_->bound.nw.v)
-			return min_dist_scale >
-			(pt_q_.u - nd_->bound.nw.u)*(pt_q_.u - nd_->bound.nw.u)
-			+ (pt_q_.v - nd_->bound.nw.v)*(pt_q_.v - nd_->bound.nw.v);
-	// 좌중
-		else if (pt_q_.v < nd_->bound.se.v)
-			return min_dist_scale >
-			(pt_q_.u - nd_->bound.nw.u)*(pt_q_.u - nd_->bound.nw.u);
-	// 좌하
-		else
-			return min_dist_scale >
-			(pt_q_.u - nd_->bound.nw.u)*(pt_q_.u - nd_->bound.nw.u)
-			+ (pt_q_.v - nd_->bound.se.v)*(pt_q_.v - nd_->bound.se.v);
-	// 중
-	else if (pt_q_.u < nd_->bound.se.u)
-		// 중상
-		if (pt_q_.v < nd_->bound.nw.v)
-			return min_dist_scale >
-			(pt_q_.v - nd_->bound.nw.v)*(pt_q_.v - nd_->bound.nw.v);
-	// 중중은 없다.
-		else if (pt_q_.v < nd_->bound.se.v)
-			return true;
-	// 중하
-		else
-			return min_dist_scale >
-			(pt_q_.v - nd_->bound.se.v)*(pt_q_.v - nd_->bound.se.v);
-	// 우
-	else
-		// 우상
-		if (pt_q_.v < nd_->bound.nw.v)
-			return min_dist_scale >
-			(pt_q_.u - nd_->bound.se.u)*(pt_q_.u - nd_->bound.se.u)
-			+ (pt_q_.v - nd_->bound.nw.v)*(pt_q_.v - nd_->bound.nw.v);
-	// 우중
-		else if (pt_q_.v < nd_->bound.se.v)
-			return min_dist_scale >
-			(pt_q_.u - nd_->bound.se.u)*(pt_q_.u - nd_->bound.se.u);
-	// 우하
-		else
-			return min_dist_scale >
-			(pt_q_.u - nd_->bound.se.u)*(pt_q_.u - nd_->bound.se.u)
-			+ (pt_q_.v - nd_->bound.se.v)*(pt_q_.v - nd_->bound.se.v);
-};
-
-*/
