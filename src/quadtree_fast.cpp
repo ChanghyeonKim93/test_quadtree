@@ -85,8 +85,8 @@ void Quadtree::insertPrivate(
                     Flag flag_we, flag_ns;
                     ID& id_elem_tmp = ndelems.elem_ids[i];
                     QuadElement& elem_tmp = all_elems_[id_elem_tmp];
-                    getQuadrant(elem_tmp.x_nom, elem_tmp.y_nom, nd.rect,
-                        flag_we, flag_ns);
+                    // getQuadrant(elem_tmp.x_nom, elem_tmp.y_nom, nd.rect, flag_we, flag_ns);
+                    FIND_QUADRANT(elem_tmp.x_nom, elem_tmp.y_nom, nd.rect, flag_we, flag_ns);
                     ID id_child = GET_CHILD_ID_FLAGS(id_node, flag_we, flag_ns);
                     addDataToNode(id_child, id_elem_tmp);
                 }
@@ -99,7 +99,8 @@ void Quadtree::insertPrivate(
     else if(nd.isBranch()) {
         // Child cases of this branch: 1) not activated, 2) branch, 3) leaf
         Flag flag_we, flag_ns;
-        getQuadrant(x_nom, y_nom, nd.rect,  flag_we, flag_ns);
+        // getQuadrant(x_nom, y_nom, nd.rect,  flag_we, flag_ns);
+        FIND_QUADRANT(x_nom, y_nom, nd.rect,  flag_we, flag_ns);
         ID id_child = GET_CHILD_ID_FLAGS(id_node,flag_we,flag_ns);
         QuadNode& nd_child = nodes[id_child];
         // // child is not activated. 
@@ -242,20 +243,37 @@ inline bool Quadtree::BWBTest(float x, float y, const QuadRect_u16& rect, float 
 
 inline bool Quadtree::BOBTest(float x, float y, const QuadRect_u16& rect, float radius){
     // Ball Overlap Bound (Circle-rect collision check)
-    Pos2d rect_center((rect.tl.x+rect.br.x)*0.5,(rect.tl.y+rect.br.y)*0.5);
-    Pos2d rect_halfsize((rect.br.x-rect.tl.x*0.5),(rect.br.y-rect.tl.y)*0.5);
-    
-    float circle_dist_x = fabs(x - (float)rect_center.x);
-    float circle_dist_y = fabs(y - (float)rect_center.y);
+    float rect_center_x = (float)(rect.tl.x+rect.br.x)*0.5;
+    float rect_center_y = (float)(rect.tl.y+rect.br.y)*0.5;
+    float rect_halfsize_x = (float)(rect.br.x-rect.tl.x)*0.5;
+    float rect_halfsize_y = (float)(rect.br.y-rect.tl.y)*0.5;
 
-    if(circle_dist_x > rect_halfsize.x + radius) return false;
-    if(circle_dist_y > rect_halfsize.y + radius) return false;
-    
-    if(circle_dist_x <= rect_halfsize.x) return true;
-    if(circle_dist_y <= rect_halfsize.y) return true;
+    float circle_dist_x = fabs(x - rect_center_x);
+    float circle_dist_y = fabs(y - rect_center_y);
 
-    float corner_dist_sq = DIST_EUCLIDEAN(circle_dist_x,circle_dist_y,rect_halfsize.x,rect_halfsize.y);
+    if(circle_dist_x > rect_halfsize_x + radius) return false;
+    if(circle_dist_y > rect_halfsize_y + radius) return false;
+    
+    if(circle_dist_x <= rect_halfsize_x) return true;
+    if(circle_dist_y <= rect_halfsize_y) return true;
+
+    float corner_dist_sq = DIST_EUCLIDEAN(circle_dist_x,circle_dist_y,rect_halfsize_x,rect_halfsize_y);
     return (corner_dist_sq <= radius*radius);
+
+    // Pos2d rect_center((rect.tl.x+rect.br.x)*0.5,(rect.tl.y+rect.br.y)*0.5);
+    // Pos2d rect_halfsize((rect.br.x-rect.tl.x)*0.5,(rect.br.y-rect.tl.y)*0.5);
+    
+    // float circle_dist_x = fabs(x - (float)rect_center.x);
+    // float circle_dist_y = fabs(y - (float)rect_center.y);
+
+    // if(circle_dist_x > rect_halfsize.x + radius) return false;
+    // if(circle_dist_y > rect_halfsize.y + radius) return false;
+    
+    // if(circle_dist_x <= rect_halfsize.x) return true;
+    // if(circle_dist_y <= rect_halfsize.y) return true;
+
+    // float corner_dist_sq = DIST_EUCLIDEAN(circle_dist_x,circle_dist_y,rect_halfsize.x,rect_halfsize.y);
+    // return (corner_dist_sq <= radius*radius);
 };
 
 void Quadtree::resetNNParameters(){
@@ -281,12 +299,12 @@ void Quadtree::nearestNeighborSearchPrivate(){
     while(!simple_stack_.empty()){
         ID id_node = simple_stack_.topAndPop();
         QuadNode&     nd           = nodes[id_node];
-        QuadNodeElements& nd_elems = node_elements[id_node];
         // Current depth <= max_depth_ ?? 
 
         // If leaf node, find nearest point and 'BWBTest()'
         if(nd.isLeaf()){
             simple_stack_.addTotalAccess();
+            QuadNodeElements& nd_elems = node_elements[id_node];
             if(findNearestElem(x_nom, y_nom, nd_elems)) {
                 id_node_matched = id_node;
             }
@@ -386,12 +404,12 @@ void Quadtree::cachedNearestNeighborSearchPrivate(){
         while(!simple_stack_.empty()){
             id_node = simple_stack_.topAndPop();
             QuadNode& nd               = nodes[id_node];
-            QuadNodeElements& nd_elems = node_elements[id_node];
             // Current depth <= max_depth_ ?? 
 
             // If leaf node, find nearest point and 'BWBTest()'
             if(nd.isLeaf()){
                 simple_stack_.addTotalAccess();
+                QuadNodeElements& nd_elems = node_elements[id_node];
                 if(findNearestElem(x_nom, y_nom, nd_elems)) {
                     query_data_.id_node_matched = id_node;
                 }

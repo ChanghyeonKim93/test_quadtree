@@ -33,4 +33,6 @@
 #define GET_CHILD_ID_INDEX(id_node,idx_child) ((id_node << 2) - 2 + idx_child)
 #define GET_MY_QUADRANT(id_node) ((id_node+2) % 4)
 
+#define FIND_QUADRANT(x_,y_,qrect,flag_we,flag_ns) {flag_we = x_ > ((qrect.tl.x+qrect.br.x)>>1); flag_ns = y_ > ((qrect.tl.y+qrect.br.y)>>1);}
+
 #endif

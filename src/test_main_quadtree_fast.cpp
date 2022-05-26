@@ -52,8 +52,8 @@ int main() {
         std::cout << "start normal matching..." << std::endl;
         for(int ii = 0; ii < n_steps; ++ii){
             // Matching
-            float x_step = 0.8*(float)ii; 
-            float y_step = 0.8*(float)ii; 
+            float x_step = 0.1*(float)ii; 
+            float y_step = 0.1*(float)ii; 
             timer::tic();
             for(int i = 0; i < n_pts; i+=5){
                 uint32_t access_temp = 0;
