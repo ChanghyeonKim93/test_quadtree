@@ -11,6 +11,7 @@ include_directories( ${includeDirs} )
 
 set(SRC ${SRC} 
     src/quadtree_fast.cpp
+    src/timer.cpp
 )
 
 add_executable (test_quadtree ${SRC} src/test_main_quadtree_fast.cpp)

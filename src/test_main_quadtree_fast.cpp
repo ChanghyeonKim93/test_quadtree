@@ -3,17 +3,12 @@
 #include <vector>
 
 #include <random>
-#include <ctime>
 #include <functional>
 
 #include "quadtree_fast.h"
-
-void print_start();
+#include "timer.h"
 
 int main() {
-    print_start();
-
-    clock_t start, finish;
     std::mt19937 engine((unsigned int)time(NULL));
     std::uniform_real_distribution<> distribution(1.0, 771.0);
     auto generator = std::bind(distribution, engine);
@@ -28,45 +23,67 @@ int main() {
         
         std::vector<std::pair<float,float>> points;
         std::vector<uint32_t> ids_node_matched;
-        int n_pts = 500;
+        int n_pts = 1000;
         for(int i = 0; i<n_pts;++i){
             points.push_back(std::make_pair<float,float>(generator(),generator()));
         }
         ids_node_matched.resize(n_pts);
 
         // Insert points
+        std::cout << "start insert..." << std::endl;
+        timer::tic();
         for(int i = 0; i < n_pts; ++i){
             auto it = points[i];
             qt->insert(it.first,it.second, i);
         }
-        std::cout << "insert OK!\n\n\n" <<std::endl;
+        std::cout << "insert OK! time: " << timer::toc(0) << " ms" <<std::endl;
 
-        // Matching
+
+// Time Test...
+        std::vector<float> time_normal;
+        std::vector<float> time_cached;
+        int n_steps = 10;
+        std::cout << "start normal matching..." << std::endl;
+        for(int ii = 0; ii < n_steps; ++ii){
+            // Matching
+            float x_step = 0.2*(float)ii; 
+            float y_step = 0.2*(float)ii; 
+            timer::tic();
+            for(int i = 0; i < n_pts; ++i){
+                ids_node_matched[i] = qt->NNSearch(points[i].first+x_step, points[i].second+y_step);
+            }
+            time_normal.push_back(timer::toc(0));
+            std::cout << ii <<"/" << n_steps <<std::endl;
+            // std::cout << "Normal NN OK! time: " << timer::toc(0) << " ms" <<std::endl;
+        }
+        std::cout << "normal matching done." << std::endl;
+
         for(int i = 0; i < n_pts; ++i){
             ids_node_matched[i] = qt->NNSearch(points[i].first, points[i].second);
         }
-        std::cout <<"Normal NN OK!\n\n\n" << std::endl;
-        
-        // cached Matching
-        for(int i = 0; i < n_pts; ++i){
-            ids_node_matched[i] = qt->cachedNNSearch(points[i].first, points[i].second, ids_node_matched[i]);
+        std::cout << "start cached matching..." << std::endl;
+        for(int ii = 0; ii < n_steps; ++ii){
+            // cached Matching
+            float x_step = 0.2*(float)ii; 
+            float y_step = 0.2*(float)ii; 
+            timer::tic();
+            for(int i = 0; i < n_pts; ++i){
+                ids_node_matched[i] = qt->cachedNNSearch(points[i].first+x_step, points[i].second+y_step, ids_node_matched[i]);
+            }
+            time_cached.push_back(timer::toc(0));
+            std::cout << ii <<"/" << n_steps <<std::endl;
+            // std::cout << "Cached NN OK! time: " << timer::toc(0) << " ms" <<std::endl;
         }
-        std::cout <<"Cached NN OK!\n\n\n" << std::endl;
+        std::cout << "cached matching done." << std::endl;
 
+        // Show the test results
+        for(int ii = 0; ii < n_steps; ++ii){
+            std::cout << ii <<"-th normal/cached: " << time_normal[ii] <<", " << time_cached[ii] <<std::endl;
+        }
     }
     catch (std::exception& e){
         std::cout <<"EXCEPTION: " << e.what() << std::endl;
     }
 
     return 0;
-}
-
-
-void print_start()
-{
-    printf("\n----------------------------\n");
-    printf("-                          -\n");
-    printf("-      program starts.     -\n");
-    printf("-                          -\n");
-    printf("----------------------------\n\n\n");
 }

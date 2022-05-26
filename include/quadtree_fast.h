@@ -61,7 +61,7 @@ private:
     typedef QuadRect<uint16_t> QuadRect_u16;
     typedef QuadRect<float>    QuadRect_f;
 
-    struct QuadNode{ // 9 bytes (actually 16 bytes)
+    struct QuadNode{ // 10 bytes (actually 16 bytes)
         // AABB (Axis-alinged Bounding box) is not contained, but just 
         // they are just calculated on the fly if needed.
         // This is more efficient because reducing the memory use of a node can 
@@ -71,19 +71,20 @@ private:
         // If -2, not initialized (no children.) 
         // else if -1,  branch node. (children exist.)
         // else, leaf node.
-        int8_t count; // 1 byte
+        int8_t state; // 1 byte (-2 : unactivated, -1: branch, 0: leaf)
+        int8_t depth; // 1 byte
 
-        QuadNode() : count(-2) {};
+        QuadNode() : state(-2), depth(-1) {};
         friend std::ostream& operator<<(std::ostream& os, const QuadNode& c){
-            os << "count:[" << c.count <<"]";
+            os << "count:[" << c.state <<"]";
             return os;
         };
 
-        inline bool isActivated() { return (count > -2); };
-        inline bool isLeaf()     { return (count >  -1); };
-        inline bool isBranch()   { return (count == -1); };
-        inline void makeLeaf()   { count =  0; };
-        inline void makeBranch() { count = -1; };
+        inline bool isActivated() { return (state > -2); };
+        inline bool isLeaf()     { return (state >  -1); };
+        inline bool isBranch()   { return (state == -1); };
+        inline void makeLeaf()   { state =  0; };
+        inline void makeBranch() { state = -1; };
     }; 
 
     struct QuadElement{ // 12 bytes (actually 16 bytes)
@@ -175,6 +176,7 @@ private:
     // sequence is always the root.
     // index 0 is not used.
     std::vector<QuadNode> nodes;
+    uint32_t n_nodes_;
     // |  1  |  2  |  3  |  4  |  5  |  ...
     // | root| tl0 | bl0 | tr0 | br0 |  ...
     // Z-order

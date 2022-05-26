@@ -177,6 +177,33 @@ src/test_main_quadtree_fast.cpp.s:
 	$(MAKE) -f CMakeFiles/test_quadtree.dir/build.make CMakeFiles/test_quadtree.dir/src/test_main_quadtree_fast.cpp.s
 .PHONY : src/test_main_quadtree_fast.cpp.s
 
+src/timer.o: src/timer.cpp.o
+
+.PHONY : src/timer.o
+
+# target to build an object file
+src/timer.cpp.o:
+	$(MAKE) -f CMakeFiles/test_quadtree.dir/build.make CMakeFiles/test_quadtree.dir/src/timer.cpp.o
+.PHONY : src/timer.cpp.o
+
+src/timer.i: src/timer.cpp.i
+
+.PHONY : src/timer.i
+
+# target to preprocess a source file
+src/timer.cpp.i:
+	$(MAKE) -f CMakeFiles/test_quadtree.dir/build.make CMakeFiles/test_quadtree.dir/src/timer.cpp.i
+.PHONY : src/timer.cpp.i
+
+src/timer.s: src/timer.cpp.s
+
+.PHONY : src/timer.s
+
+# target to generate assembly for a file
+src/timer.cpp.s:
+	$(MAKE) -f CMakeFiles/test_quadtree.dir/build.make CMakeFiles/test_quadtree.dir/src/timer.cpp.s
+.PHONY : src/timer.cpp.s
+
 # Help Target
 help:
 	@echo "The following are some of the valid targets for this Makefile:"
@@ -192,6 +219,9 @@ help:
 	@echo "... src/test_main_quadtree_fast.o"
 	@echo "... src/test_main_quadtree_fast.i"
 	@echo "... src/test_main_quadtree_fast.s"
+	@echo "... src/timer.o"
+	@echo "... src/timer.i"
+	@echo "... src/timer.s"
 .PHONY : help
 
 
