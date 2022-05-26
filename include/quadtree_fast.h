@@ -81,10 +81,10 @@ private:
         };
 
         inline bool isActivated() { return (state > -2); };
-        inline bool isLeaf()     { return (state >  -1); };
-        inline bool isBranch()   { return (state == -1); };
-        inline void makeLeaf()   { state =  0; };
-        inline void makeBranch() { state = -1; };
+        inline bool isBranch()   { return (state ==  1); };
+        inline bool isLeaf()     { return (state ==  2); };
+        inline void makeBranch() { state =  1; };
+        inline void makeLeaf()   { state =  2; };
     }; 
 
     struct QuadElement{ // 12 bytes (actually 16 bytes)
@@ -147,7 +147,7 @@ private:
     inline void getQuadrant(float x, float y, const QuadRect_u16& qrect, Flag& flag_we, Flag& flag_ns);
     inline QuadRect_u16 getQuadrantRect(Flag flag_we, Flag flag_ns, const QuadRect_u16& qrect);
 
-    inline void addDataToNode(ID id_node, float x_nom, float y_nom, ID id_elem);
+    inline void addDataToNode(ID id_node, ID id_elem);
     inline int getNumElemOfNode(ID id_node);
 
     inline void makeBranch(ID id_node);

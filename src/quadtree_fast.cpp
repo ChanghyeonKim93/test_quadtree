@@ -64,21 +64,21 @@ void Quadtree::insertPrivate(
     float& x_nom = insert_data_.x_nom;
     float& y_nom = insert_data_.y_nom;
     ID&  id_elem = insert_data_.id_elem;
+    if(nd.isLeaf()) { // This is a leaf node.
+        addDataToNode(id_node, id_elem);
 
-    if(depth < max_depth_){ // non-max depth.
-        if(nd.isLeaf()) { // This is a leaf node.
-            addDataToNode(id_node, x_nom, y_nom, id_elem);
-
+        if(depth != max_depth_){ // nonmax depth.
             int n_elem = getNumElemOfNode(id_node);
             if(n_elem > max_elem_per_leaf_){ // too much data. divide.
                 // Make all child to leaf (with no element)
                 for(uint8_t i = 0; i < 4; ++i) {
                     ID id_child = GET_CHILD_ID_INDEX(id_node, i);
                     QuadNode& nd_child = nodes[id_child];
+                    Flag flag_we = (i & BITMASK_EAST);
+                    Flag flag_ns = (i & BITMASK_SOUTH);
                     nd_child.makeLeaf();
-                    nd_child.rect = getQuadrantRect((i & BITMASK_EAST), i & BITMASK_SOUTH, nd.rect);
+                    nd_child.rect = getQuadrantRect(flag_we, flag_ns, nd.rect);
                 }
-                
 
                 // Do divide.
                 for(int i = 0; i < ndelems.getNumElem(); ++i){
@@ -88,40 +88,92 @@ void Quadtree::insertPrivate(
                     getQuadrant(elem_tmp.x_nom, elem_tmp.y_nom, nd.rect,
                         flag_we, flag_ns);
                     ID id_child = GET_CHILD_ID_FLAGS(id_node, flag_we, flag_ns);
-
-                    node_elements[id_child].elem_ids.push_back(id_elem_tmp);
+                    addDataToNode(id_child, id_elem_tmp);
                 }
 
                 //make this node as a branch
                 makeBranch(id_node);
             }
         }
-        else if(nd.isBranch()) {
-            // Child cases of this branch: 1) not activated, 2) branch, 3) leaf
-            uint8_t flag_we, flag_ns;
-            getQuadrant(insert_data_.x_nom, insert_data_.y_nom, nd.rect, 
-                flag_we, flag_ns);
-
-            ID id_child = GET_CHILD_ID_FLAGS(id_node,flag_we,flag_ns);
-            QuadRect rect_child = getQuadrantRect(flag_we, flag_ns, nd.rect);
-
-            // Go to the child
-            insertPrivate(id_child, depth+1);
-        }
-        else { // not activated
-            // Activate it as a 'empty leaf'.
-            nd.makeLeaf();
-            addDataToNode(id_node, x_nom, y_nom, id_elem);
-        }
     }
-    else { // MAX depth.
-        // make this node leaf if not.
-        std::cout << "depht:" <<(int)depth <<", id: "<< id_node <<std::endl;
-        if(!nd.isLeaf()) nd.makeLeaf();
+    else if(nd.isBranch()) {
+        // Child cases of this branch: 1) not activated, 2) branch, 3) leaf
+        Flag flag_we, flag_ns;
+        getQuadrant(x_nom, y_nom, nd.rect,  flag_we, flag_ns);
+        ID id_child = GET_CHILD_ID_FLAGS(id_node,flag_we,flag_ns);
+        QuadNode& nd_child = nodes[id_child];
+        // // child is not activated. 
+        // if(!nd_child.isActivated()) {
+        //     nd_child.makeLeaf();
+        //     nd_child.rect =  getQuadrantRect(flag_we, flag_ns, nd.rect);
+        // }
+
+        // Go to the child
+        insertPrivate(id_child, depth+1);
+    }
+    
+
+    // if(depth < max_depth_){ // non-max depth.
+    //     if(nd.isLeaf()) { // This is a leaf node.
+    //         addDataToNode(id_node, x_nom, y_nom, id_elem);
+
+    //         int n_elem = getNumElemOfNode(id_node);
+    //         if(n_elem > max_elem_per_leaf_){ // too much data. divide.
+    //             // Make all child to leaf (with no element)
+    //             for(uint8_t i = 0; i < 4; ++i) {
+    //                 ID id_child = GET_CHILD_ID_INDEX(id_node, i);
+    //                 QuadNode& nd_child = nodes[id_child];
+    //                 nd_child.makeLeaf();
+    //                 nd_child.rect = getQuadrantRect((i & BITMASK_EAST), i & BITMASK_SOUTH, nd.rect);
+    //             }
+                
+
+    //             // Do divide.
+    //             for(int i = 0; i < ndelems.getNumElem(); ++i){
+    //                 Flag flag_we, flag_ns;
+    //                 ID& id_elem_tmp = ndelems.elem_ids[i];
+    //                 QuadElement& elem_tmp = all_elems_[id_elem_tmp];
+    //                 getQuadrant(elem_tmp.x_nom, elem_tmp.y_nom, nd.rect,
+    //                     flag_we, flag_ns);
+    //                 ID id_child = GET_CHILD_ID_FLAGS(id_node, flag_we, flag_ns);
+    //                 addDataToNode(id_child, elem_tmp.x_nom, elem_tmp.y_nom, id_elem_tmp);
+    //             }
+
+    //             //make this node as a branch
+    //             makeBranch(id_node);
+    //         }
+    //     }
+    //     else if(nd.isBranch()) {
+    //         // Child cases of this branch: 1) not activated, 2) branch, 3) leaf
+    //         Flag flag_we, flag_ns;
+    //         getQuadrant(insert_data_.x_nom, insert_data_.y_nom, nd.rect, 
+    //             flag_we, flag_ns);
+
+    //         ID id_child = GET_CHILD_ID_FLAGS(id_node,flag_we,flag_ns);
+    //         QuadNode& nd_child = nodes[id_child];
+    //         // child is not activated. 
+    //         if(!nd_child.isActivated()) {
+    //             nd_child.makeLeaf();
+    //             nd_child.rect =  getQuadrantRect(flag_we, flag_ns, nd.rect);
+    //         }
+
+    //         // Go to the child
+    //         insertPrivate(id_child, depth+1);
+    //     }
+    //     else { // not activated
+    //         // Activate it as a 'empty leaf'.
+    //         throw std::runtime_error("NOT ACTIVE!?");
+    //         nd.makeLeaf();
+    //         addDataToNode(id_node, x_nom, y_nom, id_elem);
+    //     }
+    // }
+    // else { // MAX depth.
+    //     // make this node leaf if not.
+    //     if(!nd.isLeaf()) { nd.makeLeaf(); }
         
-        // Add data_id 
-        addDataToNode(id_node, x_nom, y_nom, id_elem);
-    }
+    //     // Add data_id 
+    //     addDataToNode(id_node, x_nom, y_nom, id_elem);
+    // }
 };
 
 inline void Quadtree::getQuadrant(float x, float y, const QuadRect_u16& qrect, Flag& flag_we, Flag& flag_ns){
@@ -134,9 +186,8 @@ inline void Quadtree::getQuadrant(float x, float y, const QuadRect_u16& qrect, F
     flag_ns = y > c_y; // north: 0, south: 1
 };
 
-inline void Quadtree::addDataToNode(ID id_node, float x_nom, float y_nom, ID id_elem){
+inline void Quadtree::addDataToNode(ID id_node, ID id_elem){
     node_elements[id_node].elem_ids.push_back(id_elem);
-    ++nodes[id_node].state;
 };
 
 inline int Quadtree::getNumElemOfNode(ID id_node){
@@ -287,9 +338,6 @@ void Quadtree::cachedNearestNeighborSearchPrivate(){
     float& y_nom = query_data_.y_nom;
     ID& id_data_matched = query_data_.id_data_matched;
     ID& id_elem_matched = query_data_.id_elem_matched;
-    ID& id_node_matched = query_data_.id_node_matched;
-
-    ID& id_node_cached  = query_data_.id_node_cached;
 
     // Initialize NN parameters
     resetNNParameters();
@@ -297,20 +345,18 @@ void Quadtree::cachedNearestNeighborSearchPrivate(){
     // Start from the cached node. 
     // The cached node should be a leaf node.
     // If the cached node is invalid or the root node, normal NN search is executed.
-    if(id_node_cached <= 1){ 
+    if(query_data_.id_node_cached <= 1){ 
         nearestNeighborSearchPrivate();
         return;
     }
     else // cached node is neither a root node nor a invalid node.
     {  
-        id_node_matched = id_node_cached;
+        query_data_.id_node_matched = query_data_.id_node_cached;
         simple_stack_.addTotalAccess();
 
         // Find nearest point in the cached node.
-        QuadNode&         nd       = nodes[id_node_matched];
-        QuadNodeElements& nd_elems = node_elements[id_node_matched];
-        findNearestElem(x_nom, y_nom, nd_elems);
-        if( BWBTest(x_nom, y_nom, nd.rect, sqrt(min_dist2_)) ) {
+        findNearestElem(x_nom, y_nom, node_elements[query_data_.id_node_matched]);
+        if( BWBTest(x_nom, y_nom, nodes[query_data_.id_node_matched].rect, sqrt(min_dist2_)) ) {
             // the nearest point is inside the cached node.
 #ifdef VERBOSE_
             std::cout <<"\n --- statistics (cached) - # access nodes: " << simple_stack_.getTotalAccess() << std::endl;
@@ -319,7 +365,7 @@ void Quadtree::cachedNearestNeighborSearchPrivate(){
         } 
 
         // Go up to the until satisfying 'BWBTest == true'
-        ID id_node = GET_PARENT_ID(id_node_cached);
+        ID id_node = GET_PARENT_ID(query_data_.id_node_cached);
         while(true){
             simple_stack_.addTotalAccess();
 
@@ -327,11 +373,9 @@ void Quadtree::cachedNearestNeighborSearchPrivate(){
                 id_node = 1;
                 break; // reach the root node.
             } 
-            nd       = nodes[id_node];
-            nd_elems = node_elements[id_node];
             // If 'BWBTest' is passed on this node, the nearest one should be within
             // the chilren of this node. 
-            if(BWBTest(x_nom, y_nom, nd.rect, sqrt(min_dist2_))) break; 
+            if(BWBTest(x_nom, y_nom, nodes[id_node].rect, sqrt(min_dist2_))) break; 
 
             id_node = GET_PARENT_ID(id_node);
         }
@@ -341,15 +385,15 @@ void Quadtree::cachedNearestNeighborSearchPrivate(){
         simple_stack_.push(id_node); 
         while(!simple_stack_.empty()){
             id_node = simple_stack_.topAndPop();
-            nd       = nodes[id_node];
-            nd_elems = node_elements[id_node];
+            QuadNode& nd               = nodes[id_node];
+            QuadNodeElements& nd_elems = node_elements[id_node];
             // Current depth <= max_depth_ ?? 
 
             // If leaf node, find nearest point and 'BWBTest()'
             if(nd.isLeaf()){
                 simple_stack_.addTotalAccess();
                 if(findNearestElem(x_nom, y_nom, nd_elems)) {
-                    id_node_matched = id_node;
+                    query_data_.id_node_matched = id_node;
                 }
 
                 if( BWBTest(x_nom, y_nom, nd.rect, sqrt(min_dist2_)) ) break; // the nearest point is inside the node.
@@ -362,9 +406,6 @@ void Quadtree::cachedNearestNeighborSearchPrivate(){
 
                     // Go to child. Find most probable child first.
                     ID id_child = GET_FIRST_CHILD_ID(id_node);
-                    std::cout << " is branch?: "<<nd.isBranch()<<std::endl;
-                    std::cout <<"cur id : "<< id_node <<", first child id: " << id_child << "," << n_nodes_ << std::endl;
-                    if(n_nodes_ <= id_child) throw std::runtime_error("Out of node range!");
                     if(nodes[id_child].isActivated())   simple_stack_.push(id_child);
                     if(nodes[++id_child].isActivated()) simple_stack_.push(id_child);
                     if(nodes[++id_child].isActivated()) simple_stack_.push(id_child);

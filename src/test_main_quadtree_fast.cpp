@@ -23,7 +23,7 @@ int main() {
         
         std::vector<std::pair<float,float>> points;
         std::vector<uint32_t> ids_node_matched;
-        int n_pts = 1000;
+        int n_pts = 500;
         for(int i = 0; i<n_pts;++i){
             points.push_back(std::make_pair<float,float>(generator(),generator()));
         }
@@ -42,7 +42,7 @@ int main() {
 // Time Test...
         std::vector<float> time_normal;
         std::vector<float> time_cached;
-        int n_steps = 10;
+        int n_steps = 100;
         std::cout << "start normal matching..." << std::endl;
         for(int ii = 0; ii < n_steps; ++ii){
             // Matching
