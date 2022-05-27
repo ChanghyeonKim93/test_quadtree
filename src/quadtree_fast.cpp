@@ -10,7 +10,8 @@ Quadtree::Quadtree(
     std::cout << "max_depth:" << max_depth_ <<std::endl;
     n_nodes_ = 1*(std::pow(4,max_depth_+1)-1)/(4-1);
     nodes.resize(n_nodes_);
-    nodes[1].makeLeaf();
+    // nodes[1].makeLeaf();
+    MAKE_LEAF(nodes[1]);
     std::cout << "# of nodes: " << nodes.size() << std::endl;
 
     node_elements.resize(nodes.size());
@@ -30,7 +31,6 @@ Quadtree::Quadtree(
     max_elem_per_leaf_ = max_elem_per_leaf;
 
     std::cout <<"sizeof(QuadNode):" << sizeof(Quadtree::QuadNode) << std::endl;
-
 };
 
 Quadtree::~Quadtree() { 
@@ -64,7 +64,8 @@ void Quadtree::insertPrivate(
     float& x_nom = insert_data_.x_nom;
     float& y_nom = insert_data_.y_nom;
     ID&  id_elem = insert_data_.id_elem;
-    if(nd.isLeaf()) { // This is a leaf node.
+    // if(nd.isLeaf()) { // This is a leaf node.
+    if(IS_LEAF(nd)) { // This is a leaf node.
         addDataToNode(id_node, id_elem);
 
         if(depth != max_depth_){ // nonmax depth.
@@ -80,10 +81,14 @@ void Quadtree::insertPrivate(
                 //     nd_child.rect = getQuadrantRect(flag_we, flag_ns, nd.rect);
                 // }
                 ID id_child = GET_FIRST_CHILD_ID(id_node);
-                nodes[id_child].makeLeaf();   nodes[id_child].rect = getQuadrantRect(0, 0, nd.rect);
-                nodes[++id_child].makeLeaf(); nodes[id_child].rect = getQuadrantRect(0, 1, nd.rect);
-                nodes[++id_child].makeLeaf(); nodes[id_child].rect = getQuadrantRect(1, 0, nd.rect);
-                nodes[++id_child].makeLeaf(); nodes[id_child].rect = getQuadrantRect(1, 1, nd.rect);
+                // nodes[id_child].makeLeaf();   nodes[id_child].rect = getQuadrantRect(0, 0, nd.rect);
+                // nodes[++id_child].makeLeaf(); nodes[id_child].rect = getQuadrantRect(0, 1, nd.rect);
+                // nodes[++id_child].makeLeaf(); nodes[id_child].rect = getQuadrantRect(1, 0, nd.rect);
+                // nodes[++id_child].makeLeaf(); nodes[id_child].rect = getQuadrantRect(1, 1, nd.rect);
+                MAKE_LEAF(nodes[id_child]);   nodes[id_child].rect = getQuadrantRect(0, 0, nd.rect);
+                MAKE_LEAF(nodes[++id_child]); nodes[id_child].rect = getQuadrantRect(0, 1, nd.rect);
+                MAKE_LEAF(nodes[++id_child]); nodes[id_child].rect = getQuadrantRect(1, 0, nd.rect);
+                MAKE_LEAF(nodes[++id_child]); nodes[id_child].rect = getQuadrantRect(1, 1, nd.rect);
 
                 // Do divide.
                 for(auto id_elem_tmp : ndelems.elem_ids) {
@@ -100,7 +105,8 @@ void Quadtree::insertPrivate(
             }
         }
     }
-    else if(nd.isBranch()) {
+    // else if(nd.isBranch()) {
+    else if(IS_BRANCH(nd)) {
         // Child cases of this branch: 1) not activated, 2) branch, 3) leaf
         Flag flag_we, flag_ns;
         // getQuadrant(x_nom, y_nom, nd.rect,  flag_we, flag_ns);
@@ -306,7 +312,8 @@ void Quadtree::nearestNeighborSearchPrivate(){
         // Current depth <= max_depth_ ?? 
 
         // If leaf node, find nearest point and 'BWBTest()'
-        if(nd.isLeaf()){
+        // if(nd.isLeaf()){
+        if(IS_LEAF(nd)){
             simple_stack_.addTotalAccess();
             QuadNodeElements& nd_elems = node_elements[id_node];
             if(findNearestElem(x_nom, y_nom, nd_elems)) {
@@ -323,10 +330,14 @@ void Quadtree::nearestNeighborSearchPrivate(){
 
                 // Go to child. Find most probable child first.
                 ID id_child = GET_FIRST_CHILD_ID(id_node);
-                if(nodes[id_child].isActivated())   simple_stack_.push(id_child);
-                if(nodes[++id_child].isActivated()) simple_stack_.push(id_child);
-                if(nodes[++id_child].isActivated()) simple_stack_.push(id_child);
-                if(nodes[++id_child].isActivated()) simple_stack_.push(id_child);
+                // if(nodes[id_child].isActivated())   simple_stack_.push(id_child);
+                // if(nodes[++id_child].isActivated()) simple_stack_.push(id_child);
+                // if(nodes[++id_child].isActivated()) simple_stack_.push(id_child);
+                // if(nodes[++id_child].isActivated()) simple_stack_.push(id_child);
+                if(IS_ACTIVATED(nodes[id_child]))   simple_stack_.push(id_child);
+                if(IS_ACTIVATED(nodes[++id_child])) simple_stack_.push(id_child);
+                if(IS_ACTIVATED(nodes[++id_child])) simple_stack_.push(id_child);
+                if(IS_ACTIVATED(nodes[++id_child])) simple_stack_.push(id_child);
             }
         }
     }
@@ -410,7 +421,8 @@ void Quadtree::cachedNearestNeighborSearchPrivate(){
             QuadNode& nd = nodes[id_node];
 
             // If leaf node, find nearest point and 'BWBTest()'
-            if(nd.isLeaf()){
+            // if(nd.isLeaf()){
+            if(IS_LEAF(nd)){
                 simple_stack_.addTotalAccess();
                 QuadNodeElements& nd_elems = node_elements[id_node];
                 if(findNearestElem(x_nom, y_nom, nd_elems)) {
@@ -421,16 +433,23 @@ void Quadtree::cachedNearestNeighborSearchPrivate(){
             }
             else{ // this is not a leaf node.
                 // if BOB is not satisfied, dont go to the child
-                if(nd.isActivated() && BOBTest(x_nom, y_nom, nd.rect, sqrt(min_dist2_)) ){ // if this node is overlapped by circle,
+                // if(nd.isActivated() 
+                if(IS_ACTIVATED(nd) 
+                && BOBTest(x_nom, y_nom, nd.rect, sqrt(min_dist2_)) ){ // if this node is overlapped by circle,
                     // Ball is overlaped to this node.
                     simple_stack_.addTotalAccess();
 
                     // Go to child. Find most probable child first.
                     ID id_child = GET_FIRST_CHILD_ID(id_node);
-                    if(nodes[id_child].isActivated())   simple_stack_.push(id_child);
-                    if(nodes[++id_child].isActivated()) simple_stack_.push(id_child);
-                    if(nodes[++id_child].isActivated()) simple_stack_.push(id_child);
-                    if(nodes[++id_child].isActivated()) simple_stack_.push(id_child);
+                    // if(nodes[id_child].isActivated())   simple_stack_.push(id_child);
+                    // if(nodes[++id_child].isActivated()) simple_stack_.push(id_child);
+                    // if(nodes[++id_child].isActivated()) simple_stack_.push(id_child);
+                    // if(nodes[++id_child].isActivated()) simple_stack_.push(id_child);
+                    if(IS_ACTIVATED(nodes[id_child]))   simple_stack_.push(id_child);
+                    if(IS_ACTIVATED(nodes[++id_child])) simple_stack_.push(id_child);
+                    if(IS_ACTIVATED(nodes[++id_child])) simple_stack_.push(id_child);
+                    if(IS_ACTIVATED(nodes[++id_child])) simple_stack_.push(id_child);
+
                 }
             }
         }

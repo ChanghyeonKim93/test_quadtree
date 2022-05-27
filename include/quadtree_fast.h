@@ -71,20 +71,31 @@ private:
         // If -2, not initialized (no children.) 
         // else if -1,  branch node. (children exist.)
         // else, leaf node.
-        int8_t state; // 1 byte (-2 : unactivated, -1: branch, 0: leaf)
+        uint8_t state; // 1 byte (-2 : unactivated, -1: branch, 0: leaf)
         int8_t depth; // 1 byte
 
-        QuadNode() : state(-2), depth(-1) {};
+        QuadNode() : state(1), depth(-1) {};
         friend std::ostream& operator<<(std::ostream& os, const QuadNode& c){
             os << "count:[" << c.state <<"]";
             return os;
         };
 
-        inline bool isActivated() { return (state > -2); };
-        inline bool isBranch()   { return (state ==  1); };
-        inline bool isLeaf()     { return (state ==  2); };
-        inline void makeBranch() { state =  1; };
-        inline void makeLeaf()   { state =  2; };
+#define STATE_UNACTIVATED 0b0001 // 1
+#define STATE_BRANCH      0b0010 // 2 
+#define STATE_LEAF        0b0100 // 4
+#define STATE_ACTIVATED   0b0110 // 6
+
+#define IS_ACTIVATED(nd) ((nd).state | STATE_ACTIVATED)
+#define IS_BRANCH(nd)    ((nd).state & STATE_BRANCH)
+#define IS_LEAF(nd)      ((nd).state & STATE_LEAF)
+#define MAKE_BRANCH(nd)  ((nd).state = STATE_BRANCH)
+#define MAKE_LEAF(nd)    ((nd).state = STATE_LEAF)
+
+        inline bool isActivated() { return (state > 1); };
+        inline bool isBranch()   { return (state == 2); };
+        inline bool isLeaf()     { return (state == 4); };
+        inline void makeBranch() { state = 2; };
+        inline void makeLeaf()   { state = 4; };
     }; 
 
     struct QuadElement{ // 12 bytes (actually 16 bytes)
