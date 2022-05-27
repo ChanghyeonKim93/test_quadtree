@@ -85,13 +85,13 @@ void Quadtree::insertPrivate(
                 // nodes[++id_child].makeLeaf(); nodes[id_child].rect = getQuadrantRect(0, 1, nd.rect);
                 // nodes[++id_child].makeLeaf(); nodes[id_child].rect = getQuadrantRect(1, 0, nd.rect);
                 // nodes[++id_child].makeLeaf(); nodes[id_child].rect = getQuadrantRect(1, 1, nd.rect);
-                MAKE_LEAF(nodes[id_child]);   nodes[id_child].rect = getQuadrantRect(0, 0, nd.rect);
-                MAKE_LEAF(nodes[++id_child]); nodes[id_child].rect = getQuadrantRect(0, 1, nd.rect);
-                MAKE_LEAF(nodes[++id_child]); nodes[id_child].rect = getQuadrantRect(1, 0, nd.rect);
-                MAKE_LEAF(nodes[++id_child]); nodes[id_child].rect = getQuadrantRect(1, 1, nd.rect);
+                MAKE_LEAF(nodes[id_child]);   getQuadrantRect(0, 0, nd.rect, nodes[id_child].rect);
+                MAKE_LEAF(nodes[++id_child]); getQuadrantRect(0, 1, nd.rect, nodes[id_child].rect);
+                MAKE_LEAF(nodes[++id_child]); getQuadrantRect(1, 0, nd.rect, nodes[id_child].rect);
+                MAKE_LEAF(nodes[++id_child]); getQuadrantRect(1, 1, nd.rect, nodes[id_child].rect);
 
                 // Do divide.
-                for(auto id_elem_tmp : ndelems.elem_ids) {
+                for(auto const& id_elem_tmp : ndelems.elem_ids) {
                     Flag flag_we, flag_ns;
                     QuadElement& elem_tmp = all_elems_[id_elem_tmp];
                     // getQuadrant(elem_tmp.x_nom, elem_tmp.y_nom, nd.rect, flag_we, flag_ns);
@@ -205,10 +205,10 @@ inline int Quadtree::getNumElemOfNode(ID id_node){
     return node_elements[id_node].elem_ids.size();
 };
 
-inline Quadtree::QuadRect_u16 Quadtree::getQuadrantRect(
-    Flag flag_we, Flag flag_ns, const QuadRect_u16& qrect)
+inline void Quadtree::getQuadrantRect(
+    Flag flag_we, Flag flag_ns, const QuadRect_u16& qrect,
+    QuadRect_u16& qrect_child)
 {
-    QuadRect_u16 qrect_child;
     uint16_t cent_x = (qrect.tl.x+qrect.br.x) >> 1;
     uint16_t cent_y = (qrect.tl.y+qrect.br.y) >> 1;
     // (we, ns): (we << 1) + ns; 
@@ -221,8 +221,6 @@ inline Quadtree::QuadRect_u16 Quadtree::getQuadrantRect(
     
     if(flag_ns) qrect_child.tl.y = cent_y; // south
     else        qrect_child.br.y = cent_y; // north
-
-    return qrect_child;
 };
 
 inline void Quadtree::makeBranch(ID id_node){
@@ -350,7 +348,7 @@ void Quadtree::nearestNeighborSearchPrivate(){
 
 bool Quadtree::findNearestElem(float x, float y, const QuadNodeElements& elems_thisnode){
     bool findNewNearest = false;
-    for(auto id_elem : elems_thisnode.elem_ids){
+    for(auto const& id_elem : elems_thisnode.elem_ids){
         QuadElement& elem = all_elems_[id_elem];
         float dist_temp = DIST_EUCLIDEAN(x,y, elem.x_nom,elem.y_nom);
         if(dist_temp < min_dist2_){

@@ -17,7 +17,7 @@ int main() {
     float y_range[2] = {0.f,772.f};
     uint32_t max_depth         = 8;
     uint32_t max_elem_per_leaf = 300;
-    int n_pts = 20000;
+    int n_pts = 2000;
 
     try{
         std::vector<std::pair<float,float>> points;

@@ -31,10 +31,11 @@ public:
         }
 		else return -1;
     };
-	bool empty() {
-		if (size_ < 1) return true;
-		else return false;
-	}
+	inline bool empty() { return (size_ < 1); }
+	// bool empty() { 
+	// 	if(size_ < 1 ) return true;
+	// 	else return false;
+	// }
 	inline int size() {return size_; };
 	inline bool isFull() { return (size_ == MAX_SIZE); }
 	inline void clear() { size_ = 0; total_access_ = 0;}

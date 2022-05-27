@@ -159,7 +159,7 @@ public:
 private:
     void insertPrivate(ID id_node, uint8_t depth);
     inline void getQuadrant(float x, float y, const QuadRect_u16& qrect, Flag& flag_we, Flag& flag_ns);
-    inline QuadRect_u16 getQuadrantRect(Flag flag_we, Flag flag_ns, const QuadRect_u16& qrect);
+    inline void getQuadrantRect(Flag flag_we, Flag flag_ns, const QuadRect_u16& qrect, QuadRect_u16& qrect_child);
 
     inline void addDataToNode(ID id_node, ID id_elem);
     inline int getNumElemOfNode(ID id_node);
