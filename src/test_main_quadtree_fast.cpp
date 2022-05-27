@@ -61,7 +61,7 @@ int main() {
                 access_normal[ii] += access_temp;
             }
             time_normal.push_back(timer::toc(0));
-            std::cout << ii <<"/" << n_steps <<std::endl;
+            // std::cout << ii <<"/" << n_steps <<std::endl;
             // std::cout << "Normal NN OK! time: " << timer::toc(0) << " ms" <<std::endl;
         }
         std::cout << "normal matching done." << std::endl;
@@ -81,7 +81,7 @@ int main() {
                 access_cached[ii] += access_temp;
             }
             time_cached.push_back(timer::toc(0));
-            std::cout << ii <<"/" << n_steps <<std::endl;
+            // std::cout << ii <<"/" << n_steps <<std::endl;
             // std::cout << "Cached NN OK! time: " << timer::toc(0) << " ms" <<std::endl;
         }
         std::cout << "cached matching done." << std::endl;

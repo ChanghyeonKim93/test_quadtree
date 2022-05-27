@@ -61,12 +61,12 @@ private:
     typedef QuadRect<uint16_t> QuadRect_u16;
     typedef QuadRect<float>    QuadRect_f;
 
-    struct QuadNode{ // 10 bytes (actually 16 bytes)
+    struct QuadNode{ // 10 bytes (actually 10 bytes)
         // AABB (Axis-alinged Bounding box) is not contained, but just 
         // they are just calculated on the fly if needed.
         // This is more efficient because reducing the memory use of a node can 
         // proportionally reduce cache misses when you traverse the tree.
-        QuadRect_u16 rect; // 2 * 4  = 8 bytes
+        QuadRect_u16 rect; // 2 * 4  = 8 bytes (padding size = 2 bytes)
 
         // If -2, not initialized (no children.) 
         // else if -1,  branch node. (children exist.)

@@ -29,7 +29,7 @@ Quadtree::Quadtree(
         
     max_elem_per_leaf_ = max_elem_per_leaf;
 
-    std::cout <<"sizeof QuadNode: " << sizeof(Quadtree::QuadNode) << std::endl;
+    std::cout <<"sizeof(QuadNode):" << sizeof(Quadtree::QuadNode) << std::endl;
 
 };
 
@@ -71,19 +71,23 @@ void Quadtree::insertPrivate(
             int n_elem = getNumElemOfNode(id_node);
             if(n_elem > max_elem_per_leaf_){ // too much data. divide.
                 // Make all child to leaf (with no element)
-                for(uint8_t i = 0; i < 4; ++i) {
-                    ID id_child = GET_CHILD_ID_INDEX(id_node, i);
-                    QuadNode& nd_child = nodes[id_child];
-                    Flag flag_we = (i & BITMASK_EAST);
-                    Flag flag_ns = (i & BITMASK_SOUTH);
-                    nd_child.makeLeaf();
-                    nd_child.rect = getQuadrantRect(flag_we, flag_ns, nd.rect);
-                }
+                // for(uint8_t i = 0; i < 4; ++i) {
+                //     ID id_child = GET_CHILD_ID_INDEX(id_node, i);
+                //     QuadNode& nd_child = nodes[id_child];
+                //     Flag flag_we = (i & BITMASK_EAST);
+                //     Flag flag_ns = (i & BITMASK_SOUTH);
+                //     nd_child.makeLeaf();
+                //     nd_child.rect = getQuadrantRect(flag_we, flag_ns, nd.rect);
+                // }
+                ID id_child = GET_FIRST_CHILD_ID(id_node);
+                nodes[id_child].makeLeaf();   nodes[id_child].rect = getQuadrantRect(0, 0, nd.rect);
+                nodes[++id_child].makeLeaf(); nodes[id_child].rect = getQuadrantRect(0, 1, nd.rect);
+                nodes[++id_child].makeLeaf(); nodes[id_child].rect = getQuadrantRect(1, 0, nd.rect);
+                nodes[++id_child].makeLeaf(); nodes[id_child].rect = getQuadrantRect(1, 1, nd.rect);
 
                 // Do divide.
-                for(int i = 0; i < ndelems.getNumElem(); ++i){
+                for(auto id_elem_tmp : ndelems.elem_ids) {
                     Flag flag_we, flag_ns;
-                    ID& id_elem_tmp = ndelems.elem_ids[i];
                     QuadElement& elem_tmp = all_elems_[id_elem_tmp];
                     // getQuadrant(elem_tmp.x_nom, elem_tmp.y_nom, nd.rect, flag_we, flag_ns);
                     FIND_QUADRANT(elem_tmp.x_nom, elem_tmp.y_nom, nd.rect, flag_we, flag_ns);
@@ -297,8 +301,8 @@ void Quadtree::nearestNeighborSearchPrivate(){
     // Do Breadth First Search (BFS) 
     simple_stack_.push(1); 
     while(!simple_stack_.empty()){
-        ID id_node = simple_stack_.topAndPop();
-        QuadNode&     nd           = nodes[id_node];
+        ID id_node   = simple_stack_.topAndPop();
+        QuadNode& nd = nodes[id_node];
         // Current depth <= max_depth_ ?? 
 
         // If leaf node, find nearest point and 'BWBTest()'
@@ -403,8 +407,7 @@ void Quadtree::cachedNearestNeighborSearchPrivate(){
         simple_stack_.push(id_node); 
         while(!simple_stack_.empty()){
             id_node = simple_stack_.topAndPop();
-            QuadNode& nd               = nodes[id_node];
-            // Current depth <= max_depth_ ?? 
+            QuadNode& nd = nodes[id_node];
 
             // If leaf node, find nearest point and 'BWBTest()'
             if(nd.isLeaf()){
