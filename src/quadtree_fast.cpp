@@ -55,8 +55,7 @@ void Quadtree::insert(float x, float y, int id_data){
     else throw std::runtime_error("Input x,y is out of the quadtree range.");
 };
 
-void Quadtree::insertPrivate(
-    ID id_node, uint8_t depth)
+void Quadtree::insertPrivate(ID id_node, uint8_t depth)
 {
     QuadNode&              nd = nodes[id_node]; // current node.
     QuadNodeElements& ndelems = node_elements[id_node];
