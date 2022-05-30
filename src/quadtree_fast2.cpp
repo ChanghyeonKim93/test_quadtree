@@ -10,7 +10,6 @@ Quadtree::Quadtree(
     std::cout << "max_depth:" << max_depth_ <<std::endl;
     n_nodes_ = 1*(std::pow(4,max_depth_+1)-1)/(4-1);
     nodes.resize(n_nodes_+1);
-    // nodes[1].makeLeaf();
     MAKE_LEAF(nodes[1]); // root node
     std::cout << "# of nodes: " << nodes.size() << std::endl;
 
@@ -28,8 +27,9 @@ Quadtree::Quadtree(
     // Normalizer
     x_normalizer_ = (float)nodes[1].rect.br.x/(x_range_[1] - x_range_[0]);
     y_normalizer_ = (float)nodes[1].rect.br.y/(y_range_[1] - y_range_[0]);
-    x_dist_weight_ = 1.0f/x_normalizer_;
-    y_dist_weight_ = 1.0f/y_normalizer_;
+
+    if(x_normalizer_ > y_normalizer_) y_normalizer_ = x_normalizer_;
+    else x_normalizer_ = y_normalizer_;
 
     std::cout << "xy normalizer: " << x_normalizer_ << "," << y_normalizer_ << std::endl;
     std::cout << "xy minimum grid size [px]: " 
@@ -38,6 +38,9 @@ Quadtree::Quadtree(
     max_elem_per_leaf_ = max_elem_per_leaf;
 
     std::cout <<"sizeof(QuadNode):" << sizeof(Quadtree::QuadNode) << std::endl;
+
+    params_.approx_rate = 0.5*0.5;
+    params_.approx_rate = 1.f;
 };
 
 Quadtree::~Quadtree() { 
@@ -163,14 +166,14 @@ inline bool Quadtree::BOBTest(float x, float y, const QuadRect_u32& rect, float 
     float dx = fabs(x - rect_center_x);
     float dy = fabs(y - rect_center_y);
     
-    if(dx > (rect_halfsize_x + R)) return false;
-    if(dy > (rect_halfsize_y + R)) return false;
+    if(dx > (rect_halfsize_x + R) ) return false;
+    if(dy > (rect_halfsize_y + R) ) return false;
 
-    if(dx <= (rect_halfsize_x)) return true;
-    if(dy <= (rect_halfsize_y)) return true;
+    if(dx <= rect_halfsize_x) return true;
+    if(dy <= rect_halfsize_y) return true;
 
     float corner_dist_sq = (dx-rect_halfsize_x)*(dx-rect_halfsize_x)
-        + (dy-rect_halfsize_y)*(dy-rect_halfsize_y);
+                         + (dy-rect_halfsize_y)*(dy-rect_halfsize_y);
     
     return (corner_dist_sq <= (R*R));
 };
@@ -180,7 +183,6 @@ void Quadtree::resetNNParameters(){
     simple_stack_.clear();
     query_data_.min_dist2_ = std::numeric_limits<float>::max();
     query_data_.min_dist_  = std::numeric_limits<float>::max();
-    min_dist2_ = std::numeric_limits<float>::max();
 };
 
 void Quadtree::nearestNeighborSearchPrivate(){
@@ -247,12 +249,11 @@ bool Quadtree::findNearestElem(float x, float y, const QuadNodeElements& elems_t
     for(const ID& id_elem : elems_thisnode.elem_ids){
         QuadElement& elem = all_elems_[id_elem];
         float dist_temp = DIST_EUCLIDEAN(x,y, elem.x_nom,elem.y_nom);
-        if(dist_temp < min_dist2_){
-            min_dist2_      = dist_temp;
+        if(dist_temp < query_data_.min_dist2_){
             this->query_data_.id_data_matched = elem.id_data;
             this->query_data_.id_elem_matched = id_elem;
-            this->query_data_.min_dist2_      = dist_temp;
-            this->query_data_.min_dist_       = sqrt(dist_temp);
+            this->query_data_.min_dist2_      = dist_temp * params_.approx_rate;
+            this->query_data_.min_dist_       = sqrt(query_data_.min_dist2_);
             findNewNearest  = true;
         }
     }

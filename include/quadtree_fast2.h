@@ -95,12 +95,6 @@ private:
 #define MAKE_ACTIVATE(nd)  ( (nd).state = STATE_ACTIVATED  )
 #define MAKE_BRANCH(nd)    ( (nd).state = STATE_BRANCH     )
 #define MAKE_LEAF(nd)      ( (nd).state = STATE_LEAF       )
-
-        // inline bool isActivated() { return (state > 1); };
-        // inline bool isBranch()   { return (state == 2); };
-        // inline bool isLeaf()     { return (state == 4); };
-        // inline void makeBranch() { state = 2; };
-        // inline void makeLeaf()   { state = 4; };
     }; 
 
     struct QuadElement{ // 12 bytes (actually 16 bytes)
@@ -151,6 +145,15 @@ private:
         float min_dist_;
     };
 
+    struct QuadParams{
+        // Distance parameter
+        uint8_t flag_approx_dist;
+        float approx_rate; // 0.3~1.0;
+        
+        // Searching parameter
+        uint8_t flag_adjacent_only;
+    };
+
 public:
     Quadtree(float x_min, float x_max, float y_min, float y_max, uint32_t max_depth, uint32_t max_elem_per_leaf);
     ~Quadtree();
@@ -192,6 +195,9 @@ private:
     void cachedNearestNeighborSearchPrivate();
 
 private:
+    QuadParams params_;
+
+private:
     // Stores all the elements in the quadtree.
     std::vector<QuadElement>  all_elems_;
     std::vector<QuadNodeElements> node_elements;
@@ -211,8 +217,7 @@ private:
 
     float x_normalizer_;
     float y_normalizer_;
-    float x_dist_weight_;
-    float y_dist_weight_;
+
 
 private: 
     // quadtree range (in real scale)
@@ -229,7 +234,6 @@ private:
 // For nearest neighbor search algorithm
 private:
     QuaryData query_data_;
-    float min_dist2_;
     SimpleStack<ID> simple_stack_;
 
     inline void resetNNParameters();

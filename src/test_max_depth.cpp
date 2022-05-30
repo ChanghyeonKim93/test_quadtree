@@ -16,15 +16,15 @@ int main() {
     float x_range[2] = {0.f,1032.f};
     float y_range[2] = {0.f,772.f};
     uint32_t max_depth         = 12;
-    uint32_t max_elem_per_leaf = 50;
+    uint32_t max_elem_per_leaf = 20;
     
-    int n_pts = 2000;
+    int n_pts = 20000;
     std::vector<std::pair<float,float>> pts_data;
     for(uint32_t i = 0; i < n_pts; ++i){
         pts_data.push_back( std::make_pair<float,float>(generator(), generator()) );
     }
 
-    int n_pts_q = 500;
+    int n_pts_q = 1000;
     std::vector<std::pair<float,float>> pts_q;
     for(uint32_t i = 0; i < n_pts_q; ++i){
         pts_q.push_back(std::make_pair<float,float>(generator(), generator()));
