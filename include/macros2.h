@@ -10,7 +10,7 @@
 #define INBOUND_RECT_PTS(x,y,x_tl,y_tl,x_br,y_br) (((x) > (x_tl) && (x) < (x_br) && (y) > (y_tl) && (y) < (y_br)))
 
 // related to the quadtree node ID
-// child idx (flag_sn, flag_ew)
+// child idx (flag_sn, flag_ew) ( sn << 1 | ew )
 // |-------|-------|
 // |0 (0,0)|1 (0,1)|
 // |-------|-------|

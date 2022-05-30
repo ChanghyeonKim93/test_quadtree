@@ -49,7 +49,7 @@ private:
         QuadRect(const Pos2d<T>& tl_, const Pos2d<T>& br_) : tl(tl_), br(br_) { };
 
         inline Pos2d<T> getCenter(){
-            return Pos2d<T>((tl.x+br.x)*0.5, (tl.y+br.y)*0.5);
+            return Pos2d<T>((double)(tl.x+br.x)*0.5, (double)(tl.y+br.y)*0.5);
         };
 
         friend std::ostream& operator<<(std::ostream& os, const QuadRect& c){
@@ -59,37 +59,42 @@ private:
     };
 
     typedef QuadRect<uint16_t> QuadRect_u16;
+    typedef QuadRect<uint32_t> QuadRect_u32;
     typedef QuadRect<float>    QuadRect_f;
 
-    struct QuadNode{ // 10 bytes (actually 10 bytes)
+    struct QuadNode{ // 20 bytes (actually 10 bytes)
         // AABB (Axis-alinged Bounding box) is not contained, but just 
         // they are just calculated on the fly if needed.
         // This is more efficient because reducing the memory use of a node can 
         // proportionally reduce cache misses when you traverse the tree.
-        QuadRect_u16 rect; // 2 * 4  = 8 bytes (padding size = 2 bytes)
+        QuadRect_u32 rect; // 4 * 4  = 16 bytes (padding size = 4 bytes)
 
         // If -2, not initialized (no children.) 
         // else if -1,  branch node. (children exist.)
         // else, leaf node.
         uint8_t state; // 1 byte (-2 : unactivated, -1: branch, 0: leaf)
-        int8_t depth; // 1 byte
+        int8_t  depth; // 1 byte
 
-        QuadNode() : state(1), depth(-1) {};
+#define STATE_UNACTIVATED 0b0000 // 0
+#define STATE_ACTIVATED   0b0001 // 1 (0b0001)
+#define STATE_BRANCH      0b0011 // 2 (0b0011)
+#define STATE_LEAF        0b0101 // 4 (0b0101)
+
+        QuadNode() : state(STATE_UNACTIVATED), depth(-1) {};
         friend std::ostream& operator<<(std::ostream& os, const QuadNode& c){
             os << "count:[" << c.state <<"]";
             return os;
         };
 
-#define STATE_UNACTIVATED 0b0001 // 1
-#define STATE_BRANCH      0b0010 // 2 
-#define STATE_LEAF        0b0100 // 4
-#define STATE_ACTIVATED   0b0110 // 6
+#define IS_UNACTIVATED(nd) ( (nd).state == 0b0000         )
+#define IS_ACTIVATED(nd)   ( (nd).state  & STATE_ACTIVATED)
+#define IS_BRANCH(nd)      ( (nd).state == STATE_BRANCH   )
+#define IS_LEAF(nd)        ( (nd).state == STATE_LEAF     )
 
-#define IS_ACTIVATED(nd) ((nd).state | STATE_ACTIVATED)
-#define IS_BRANCH(nd)    ((nd).state & STATE_BRANCH)
-#define IS_LEAF(nd)      ((nd).state & STATE_LEAF)
-#define MAKE_BRANCH(nd)  ((nd).state = STATE_BRANCH)
-#define MAKE_LEAF(nd)    ((nd).state = STATE_LEAF)
+#define MAKE_UNACTIVATE(nd)( (nd).state = STATE_UNACTIVATED)
+#define MAKE_ACTIVATE(nd)  ( (nd).state = STATE_ACTIVATED  )
+#define MAKE_BRANCH(nd)    ( (nd).state = STATE_BRANCH     )
+#define MAKE_LEAF(nd)      ( (nd).state = STATE_LEAF       )
 
         // inline bool isActivated() { return (state > 1); };
         // inline bool isBranch()   { return (state == 2); };
@@ -99,12 +104,12 @@ private:
     }; 
 
     struct QuadElement{ // 12 bytes (actually 16 bytes)
-        ID id_data; // 4 bytes
         float  x_nom;   // 4 bytes
         float  y_nom;   // 4 bytes
+        ID     id_data; // 4 bytes
 
         QuadElement() : id_data(0),x_nom(-1.0f),y_nom(-1.0f) { };
-        QuadElement(int id_data_, float x_nom_, float y_nom_)
+        QuadElement(float x_nom_, float y_nom_, int id_data_)
         : id_data(id_data_), x_nom(x_nom_), y_nom(y_nom_) { };
     };
 
@@ -112,18 +117,18 @@ private:
         // Stores the ID for the element (can be used to refer to external data).
         std::vector<ID> elem_ids; // 8 bytes
 
-        QuadNodeElements() { elem_ids.resize(0); };
+        QuadNodeElements()  { elem_ids.resize(0); };
         inline void reset() { elem_ids.resize(0); };
         inline int getNumElem() const { return elem_ids.size(); };
     };
 
     struct InsertData{ // 12 bytes (actually 16 bytes)
-        float x_nom; // 4 bytes
-        float y_nom; // 4 bytes
-        ID id_elem;  // 4 bytes
+        float x_nom;   // 4 bytes
+        float y_nom;   // 4 bytes
+        ID    id_elem; // 4 bytes
 
         InsertData() : x_nom(-1.0f), y_nom(-1.0f), id_elem(0){};
-        void setData(ID id_elem_, float x_nom_, float y_nom_){
+        void setData(float x_nom_, float y_nom_, ID id_elem_){
             x_nom   = x_nom_; 
             y_nom   = y_nom_;
             id_elem = id_elem_;
@@ -135,13 +140,15 @@ private:
         float y; // 4 bytes
         float x_nom; // 4 bytes
         float y_nom; // 4 bytes
+
         ID id_node_cached; // 4 bytes
 
         ID id_data_matched; // 4 bytes
-        ID id_elem_matched; // 4 bytes
         ID id_node_matched; // 4 bytes
+        ID id_elem_matched; // 4 bytes
 
         float min_dist2_;
+        float min_dist_;
     };
 
 public:
@@ -149,17 +156,23 @@ public:
     ~Quadtree();
 
     void insert(float x, float y, int id_data);
-    ID NNSearch(float x, float y);
-    ID cachedNNSearch(float x, float y, int id_node_cached);
+    void NNSearch(float x, float y,
+        ID& id_data_matched, ID& id_node_matched);
+    void cachedNNSearch(float x, float y, int id_node_cached, 
+        ID& id_data_matched, ID& id_node_matched);
     
-    ID NNSearchDebug(float x, float y, uint32_t& n_access);
-    ID cachedNNSearchDebug(float x, float y, int id_node_cached, uint32_t& n_access);
+    void NNSearchDebug(float x, float y, 
+        ID& id_data_matched, ID& id_node_matched, uint32_t& n_access);
+    void cachedNNSearchDebug(float x, float y, int id_node_cached, 
+        ID& id_data_matched, ID& id_node_matched, uint32_t& n_access);
 
 // Related to generate tree.
 private:
     void insertPrivate(ID id_node, uint8_t depth);
-    inline void getQuadrant(float x, float y, const QuadRect_u16& qrect, Flag& flag_sn, Flag& flag_ew);
-    inline void getQuadrantRect(Flag flag_sn, Flag flag_ew, const QuadRect_u16& qrect, QuadRect_u16& qrect_child);
+    inline void getQuadrant(float x, float y, const QuadRect_u32& qrect, 
+        Flag& flag_sn, Flag& flag_ew);
+
+    inline void makeChildrenLeaves(ID id_child, const QuadRect_u32& rect);
 
     inline void addDataToNode(ID id_node, ID id_elem);
     inline int getNumElemOfNode(ID id_node);
@@ -170,10 +183,8 @@ private:
 private:
     void nearestNeighborSearchPrivate(); // return id_data matched.
     
-    inline bool inTreeBoundary(float x, float y);
-    inline bool inBound( float x, float y, const QuadRect_u16& rect);
-    inline bool BWBTest( float x, float y, const QuadRect_u16& rect, float radius); // Ball Within Bound
-    inline bool BOBTest( float x, float y, const QuadRect_u16& rect, float radius); // Ball Overlap Bound
+    inline bool BWBTest( float x, float y, const QuadRect_u32& rect, float radius); // Ball Within Bound
+    inline bool BOBTest( float x, float y, const QuadRect_u32& rect, float radius); // Ball Overlap Bound
     bool findNearestElem(float x, float y, const QuadNodeElements& elems);
 
 // Related to cached NN search (private)
@@ -200,6 +211,8 @@ private:
 
     float x_normalizer_;
     float y_normalizer_;
+    float x_dist_weight_;
+    float y_dist_weight_;
 
 private: 
     // quadtree range (in real scale)

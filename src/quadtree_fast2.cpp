@@ -9,24 +9,31 @@ Quadtree::Quadtree(
     // Make nodes
     std::cout << "max_depth:" << max_depth_ <<std::endl;
     n_nodes_ = 1*(std::pow(4,max_depth_+1)-1)/(4-1);
-    nodes.resize(n_nodes_);
+    nodes.resize(n_nodes_+1);
     // nodes[1].makeLeaf();
-    MAKE_LEAF(nodes[1]);
+    MAKE_LEAF(nodes[1]); // root node
     std::cout << "# of nodes: " << nodes.size() << std::endl;
 
     node_elements.resize(nodes.size());
     std::cout <<"max depth nodes range: " << 1+(std::pow(4,max_depth_)-1)/3 <<"~" <<(std::pow(4,max_depth_+1)-1)/3<<std::endl;
 
     // Max depth and normalized tree size 
-    nodes[1].rect.tl = Pos2d<uint16_t>(0,0);
-    nodes[1].rect.br = Pos2d<uint16_t>(std::pow(2, max_depth_),std::pow(2, max_depth_));
+    uint32_t br_x = 1 << 16;
+    uint32_t br_y = 1 << 16;
+    
+    nodes[1].rect.tl = Pos2d<uint32_t>(0, 0);
+    nodes[1].rect.br = Pos2d<uint32_t>(br_x, br_y);
     std::cout << "grid size: " << nodes[1].rect <<std::endl;
 
     // Normalizer
-    x_normalizer_ = nodes[1].rect.br.x/(x_range_[1]-x_range_[0]);
-    y_normalizer_ = nodes[1].rect.br.y/(y_range_[1]-y_range_[0]);
-    std::cout << "xy normalizer: " << x_normalizer_<<"," <<y_normalizer_<<std::endl;
-    std::cout << "xy minimum grid size [px]: " << 1./x_normalizer_<<"," <<1./y_normalizer_<<std::endl;
+    x_normalizer_ = (float)nodes[1].rect.br.x/(x_range_[1] - x_range_[0]);
+    y_normalizer_ = (float)nodes[1].rect.br.y/(y_range_[1] - y_range_[0]);
+    x_dist_weight_ = 1.0f/x_normalizer_;
+    y_dist_weight_ = 1.0f/y_normalizer_;
+
+    std::cout << "xy normalizer: " << x_normalizer_ << "," << y_normalizer_ << std::endl;
+    std::cout << "xy minimum grid size [px]: " 
+        << 1./x_normalizer_ << "," << 1./y_normalizer_ << std::endl;
         
     max_elem_per_leaf_ = max_elem_per_leaf;
 
@@ -47,8 +54,8 @@ void Quadtree::insert(float x, float y, int id_data){
         std::cout << "\n======== insert [" << x_nom << "," << y_nom << "] ========\n"; 
 #endif
   
-        all_elems_.push_back(QuadElement(id_data,x_nom,y_nom));
-        insert_data_.setData(all_elems_.size()-1, x_nom, y_nom);
+        all_elems_.push_back(QuadElement(x_nom,y_nom, (ID)id_data));
+        insert_data_.setData(x_nom, y_nom, all_elems_.size()-1);
 
         this->insertPrivate(1, 0);
     }
@@ -59,26 +66,31 @@ void Quadtree::insertPrivate(ID id_node, uint8_t depth)
 {
     QuadNode&              nd = nodes[id_node]; // current node.
     QuadNodeElements& ndelems = node_elements[id_node];
+    nd.depth = depth;
     
     float& x_nom = insert_data_.x_nom;
     float& y_nom = insert_data_.y_nom;
-    ID&  id_elem = insert_data_.id_elem;
 
-    if(IS_LEAF(nd)) { // This is a leaf node.
-        addDataToNode(id_node, id_elem);
+    if(IS_BRANCH(nd)) {
+        // Child cases of this branch: 1) not activated, 2) branch, 3) leaf
+        Flag flag_sn, flag_ew;
+        FIND_QUADRANT(x_nom, y_nom, nd.rect,      flag_sn, flag_ew);
+        ID id_child = GET_CHILD_ID_FLAGS(id_node, flag_sn, flag_ew);
+        
+        insertPrivate(id_child, depth + 1); // Go to the child
+    }
+    else if(IS_LEAF(nd)) { // This is a leaf node.
+        addDataToNode(id_node, insert_data_.id_elem);
 
-        if(depth != max_depth_){ // nonmax depth.
+        if(depth < max_depth_){ // nonmax depth.
             int n_elem = getNumElemOfNode(id_node);
             if(n_elem > max_elem_per_leaf_){ // too much data. divide.
                 // Make all child to leaf (with no element)
                 ID id_child = GET_FIRST_CHILD_ID(id_node);
-                MAKE_LEAF(nodes[id_child]);   getQuadrantRect(0, 0, nd.rect, nodes[id_child].rect);
-                MAKE_LEAF(nodes[++id_child]); getQuadrantRect(0, 1, nd.rect, nodes[id_child].rect);
-                MAKE_LEAF(nodes[++id_child]); getQuadrantRect(1, 0, nd.rect, nodes[id_child].rect);
-                MAKE_LEAF(nodes[++id_child]); getQuadrantRect(1, 1, nd.rect, nodes[id_child].rect);
+                makeChildrenLeaves(id_child, nd.rect);
 
                 // Do divide.
-                for(auto const& id_elem_tmp : ndelems.elem_ids) {
+                for(const ID& id_elem_tmp : ndelems.elem_ids) {
                     Flag flag_sn, flag_ew;
                     QuadElement& elem_tmp = all_elems_[id_elem_tmp];
                     FIND_QUADRANT(elem_tmp.x_nom, elem_tmp.y_nom, nd.rect, flag_sn, flag_ew);
@@ -91,22 +103,13 @@ void Quadtree::insertPrivate(ID id_node, uint8_t depth)
             }
         }
     }
-    else if(IS_BRANCH(nd)) {
-        // Child cases of this branch: 1) not activated, 2) branch, 3) leaf
-        Flag flag_sn, flag_ew;
-        FIND_QUADRANT(x_nom, y_nom, nd.rect,      flag_sn, flag_ew);
-        ID id_child = GET_CHILD_ID_FLAGS(id_node, flag_sn, flag_ew);
-        QuadNode& nd_child = nodes[id_child];
-
-        insertPrivate(id_child, depth + 1); // Go to the child
-    }
 };
 
-inline void Quadtree::getQuadrant(float x, float y, const QuadRect_u16& qrect, Flag& flag_sn, Flag& flag_ew){
-    uint16_t c_x = (qrect.tl.x + qrect.br.x) >> 1;
-    uint16_t c_y = (qrect.tl.y + qrect.br.y) >> 1;
-    flag_ew = x > c_x; // west : 0, east : 1
-    flag_sn = y > c_y; // north: 0, south: 1
+inline void Quadtree::getQuadrant(float x, float y, const QuadRect_u32& qrect, Flag& flag_sn, Flag& flag_ew){
+    uint32_t cent_x = ((qrect.tl.x + qrect.br.x) >> 1);
+    uint32_t cent_y = ((qrect.tl.y + qrect.br.y) >> 1);
+    flag_ew = x > cent_x; // west : 0, east : 1
+    flag_sn = y > cent_y; // north: 0, south: 1
 };
 
 inline void Quadtree::addDataToNode(ID id_node, ID id_elem){
@@ -117,22 +120,26 @@ inline int Quadtree::getNumElemOfNode(ID id_node){
     return node_elements[id_node].elem_ids.size();
 };
 
-inline void Quadtree::getQuadrantRect(
-    Flag flag_sn, Flag flag_ew, const QuadRect_u16& qrect,
-    QuadRect_u16& qrect_child)
-{
-    uint16_t cent_x = (qrect.tl.x+qrect.br.x) >> 1;
-    uint16_t cent_y = (qrect.tl.y+qrect.br.y) >> 1;
-    // (we, ns): (we << 1) + ns; 
-    // (0,0): 0 | (1,0): 2
-    // (0,1): 1 | (1,1): 3
-    qrect_child = qrect;
 
-    if(flag_ew) qrect_child.tl.x = cent_x; // east
-    else        qrect_child.br.x = cent_x; // west
-    
-    if(flag_sn) qrect_child.tl.y = cent_y; // south
-    else        qrect_child.br.y = cent_y; // north
+inline void Quadtree::makeChildrenLeaves(ID id_child, const QuadRect_u32& rect){
+    uint32_t cent_x = (rect.tl.x + rect.br.x) >> 1;
+    uint32_t cent_y = (rect.tl.y + rect.br.y) >> 1;
+
+    MAKE_LEAF(nodes[id_child]); // (0,0) (top left)
+    nodes[id_child].rect.tl.x = rect.tl.x; nodes[id_child].rect.tl.y = rect.tl.y; 
+    nodes[id_child].rect.br.x = cent_x;    nodes[id_child].rect.br.y = cent_y;
+
+    MAKE_LEAF(nodes[++id_child]); // (0,1) (top right)
+    nodes[id_child].rect.tl.x = cent_x;    nodes[id_child].rect.tl.y = rect.tl.y; 
+    nodes[id_child].rect.br.x = rect.br.x; nodes[id_child].rect.br.y = cent_y;
+
+    MAKE_LEAF(nodes[++id_child]); // (1,0) (bot left)
+    nodes[id_child].rect.tl.x = rect.tl.x; nodes[id_child].rect.tl.y = cent_y; 
+    nodes[id_child].rect.br.x = cent_x;    nodes[id_child].rect.br.y = rect.br.y;
+
+    MAKE_LEAF(nodes[++id_child]); // (1,1) (bot right)
+    nodes[id_child].rect.tl.x = cent_x;    nodes[id_child].rect.tl.y = cent_y; 
+    nodes[id_child].rect.br.x = rect.br.x; nodes[id_child].rect.br.y = rect.br.y;
 };
 
 inline void Quadtree::makeBranch(ID id_node){
@@ -140,63 +147,46 @@ inline void Quadtree::makeBranch(ID id_node){
     node_elements[id_node].reset();
 };
 
-inline bool Quadtree::inTreeBoundary(float x, float y){
-    return INBOUND_RECT(x,y,nodes[1].rect);
-};
-
-inline bool Quadtree::inBound(float x, float y, const QuadRect_u16& rect){
-    return INBOUND_RECT(x,y,rect);
-};
-
-inline bool Quadtree::BWBTest(float x, float y, const QuadRect_u16& rect, float radius){
+inline bool Quadtree::BWBTest(float x, float y, const QuadRect_u32& rect, float radius){
     // Ball Within Bound (Circle bounded by rect check)
     float rect_size = (float)(rect.br.x-rect.tl.x);
     return (rect_size >= 2*radius) && INBOUND_RECT_PTS(x, y, rect.tl.x+radius,rect.tl.y+radius, rect.br.x-radius, rect.br.y-radius);
 };
 
-inline bool Quadtree::BOBTest(float x, float y, const QuadRect_u16& rect, float radius){
+inline bool Quadtree::BOBTest(float x, float y, const QuadRect_u32& rect, float R){
     // Ball Overlap Bound (Circle-rect collision check)
-    float rect_center_x   = (float)(rect.br.x+rect.tl.x)*0.5;
-    float rect_center_y   = (float)(rect.br.y+rect.tl.y)*0.5;
-    float rect_halfsize_x = (float)(rect.br.x-rect.tl.x)*0.5;
-    float rect_halfsize_y = (float)(rect.br.y-rect.tl.y)*0.5;
+    float rect_center_x   = (float)(rect.br.x+rect.tl.x)*0.5f;
+    float rect_center_y   = (float)(rect.br.y+rect.tl.y)*0.5f;
+    float rect_halfsize_x = (float)(rect.br.x-rect.tl.x)*0.5f;
+    float rect_halfsize_y = (float)(rect.br.y-rect.tl.y)*0.5f;
 
-    float circle_dist_x = fabs(x - rect_center_x);
-    float circle_dist_y = fabs(y - rect_center_y);
-
-    return (circle_dist_x <= rect_halfsize_x + radius)
-        && (circle_dist_y <= rect_halfsize_y + radius)
-        && (circle_dist_x <= rect_halfsize_x)
-        && (circle_dist_y <= rect_halfsize_y)
-        && (DIST_EUCLIDEAN(circle_dist_x, circle_dist_y, rect_halfsize_x, rect_halfsize_y) <= radius*radius);
-
-    // float rect_center_x   = (float)(rect.br.x+rect.tl.x)*0.5;
-    // float rect_center_y   = (float)(rect.br.y+rect.tl.y)*0.5;
-    // float rect_halfsize_x = (float)(rect.br.x-rect.tl.x)*0.5;
-    // float rect_halfsize_y = (float)(rect.br.y-rect.tl.y)*0.5;
-
-    // float circle_dist_x = fabs(x - rect_center_x);
-    // float circle_dist_y = fabs(y - rect_center_y);
-
-    // if(circle_dist_x > rect_halfsize_x + radius) return false;
-    // if(circle_dist_y > rect_halfsize_y + radius) return false;
+    float dx = fabs(x - rect_center_x);
+    float dy = fabs(y - rect_center_y);
     
-    // if(circle_dist_x <= rect_halfsize_x) return true;
-    // if(circle_dist_y <= rect_halfsize_y) return true;
-    // float corner_dist_sq = DIST_EUCLIDEAN(circle_dist_x,circle_dist_y,rect_halfsize_x,rect_halfsize_y);
-    // return (corner_dist_sq <= radius*radius);
+    if(dx > (rect_halfsize_x + R)) return false;
+    if(dy > (rect_halfsize_y + R)) return false;
+
+    if(dx <= (rect_halfsize_x)) return true;
+    if(dy <= (rect_halfsize_y)) return true;
+
+    float corner_dist_sq = (dx-rect_halfsize_x)*(dx-rect_halfsize_x)
+        + (dy-rect_halfsize_y)*(dy-rect_halfsize_y);
+    
+    return (corner_dist_sq <= (R*R));
 };
 
 void Quadtree::resetNNParameters(){
     // Initialize values
     simple_stack_.clear();
+    query_data_.min_dist2_ = std::numeric_limits<float>::max();
+    query_data_.min_dist_  = std::numeric_limits<float>::max();
     min_dist2_ = std::numeric_limits<float>::max();
 };
 
 void Quadtree::nearestNeighborSearchPrivate(){
     // In this function, search the nearest element from the scratch (from the root node)
-    float& x_nom = query_data_.x_nom;
-    float& y_nom = query_data_.y_nom;
+    float x_nom = query_data_.x_nom;
+    float y_nom = query_data_.y_nom;
     ID& id_data_matched = query_data_.id_data_matched;
     ID& id_elem_matched = query_data_.id_elem_matched;
     ID& id_node_matched = query_data_.id_node_matched;
@@ -221,20 +211,27 @@ void Quadtree::nearestNeighborSearchPrivate(){
                 id_node_matched = id_node;
             }
 
-            if( BWBTest(x_nom, y_nom, nd.rect, sqrt(min_dist2_)) ) break; // the nearest point is inside the node.
+            if( BWBTest(x_nom, y_nom, nd.rect, query_data_.min_dist_) ) break; // the nearest point is inside the node.
         }
-        else{ // this is not a leaf node.
-            // if BOB is not satisfied, dont go to the child
-            if( BOBTest(x_nom, y_nom, nd.rect, sqrt(min_dist2_)) ){ // if this node is overlapped by circle,
-                // Ball is overlaped to this node.
-                simple_stack_.addTotalAccess();
+        else { // this is not a leaf node.
+            simple_stack_.addTotalAccess();
 
-                // Go to child. Find most probable child first.
-                ID id_child = GET_FIRST_CHILD_ID(id_node);
-                if(IS_ACTIVATED(nodes[id_child]))   simple_stack_.push(id_child);
-                if(IS_ACTIVATED(nodes[++id_child])) simple_stack_.push(id_child);
-                if(IS_ACTIVATED(nodes[++id_child])) simple_stack_.push(id_child);
-                if(IS_ACTIVATED(nodes[++id_child])) simple_stack_.push(id_child);
+            // Go to child. Find most probable child first.
+            ID id_child = GET_FIRST_CHILD_ID(id_node);
+            if(IS_ACTIVATED(nodes[id_child]) && BOBTest(x_nom, y_nom, nodes[id_child].rect, query_data_.min_dist_)) {
+                simple_stack_.push(id_child);
+            }
+            ++id_child;
+            if(IS_ACTIVATED(nodes[id_child]) && BOBTest(x_nom, y_nom, nodes[id_child].rect, query_data_.min_dist_)) {
+                simple_stack_.push(id_child);
+            }
+            ++id_child;
+            if(IS_ACTIVATED(nodes[id_child]) && BOBTest(x_nom, y_nom, nodes[id_child].rect, query_data_.min_dist_)) {
+                simple_stack_.push(id_child);
+            }
+            ++id_child;
+            if(IS_ACTIVATED(nodes[id_child]) && BOBTest(x_nom, y_nom, nodes[id_child].rect, query_data_.min_dist_)) {
+                simple_stack_.push(id_child);
             }
         }
     }
@@ -247,7 +244,7 @@ void Quadtree::nearestNeighborSearchPrivate(){
 
 bool Quadtree::findNearestElem(float x, float y, const QuadNodeElements& elems_thisnode){
     bool findNewNearest = false;
-    for(auto const& id_elem : elems_thisnode.elem_ids){
+    for(const ID& id_elem : elems_thisnode.elem_ids){
         QuadElement& elem = all_elems_[id_elem];
         float dist_temp = DIST_EUCLIDEAN(x,y, elem.x_nom,elem.y_nom);
         if(dist_temp < min_dist2_){
@@ -255,6 +252,7 @@ bool Quadtree::findNearestElem(float x, float y, const QuadNodeElements& elems_t
             this->query_data_.id_data_matched = elem.id_data;
             this->query_data_.id_elem_matched = id_elem;
             this->query_data_.min_dist2_      = dist_temp;
+            this->query_data_.min_dist_       = sqrt(dist_temp);
             findNewNearest  = true;
         }
     }
@@ -285,7 +283,7 @@ void Quadtree::cachedNearestNeighborSearchPrivate(){
 
         // Find nearest point in the cached node.
         findNearestElem(x_nom, y_nom, node_elements[query_data_.id_node_matched]);
-        if( BWBTest(x_nom, y_nom, nodes[query_data_.id_node_matched].rect, sqrt(min_dist2_)) ) {
+        if( BWBTest(x_nom, y_nom, nodes[query_data_.id_node_matched].rect, query_data_.min_dist_) ) {
             // the nearest point is inside the cached node.
 #ifdef VERBOSE_
             std::cout <<"\n --- statistics (cached) - # access nodes: " << simple_stack_.getTotalAccess() << std::endl;
@@ -304,7 +302,7 @@ void Quadtree::cachedNearestNeighborSearchPrivate(){
             } 
             // If 'BWBTest' is passed on this node, the nearest one should be within
             // the chilren of this node. 
-            if(BWBTest(x_nom, y_nom, nodes[id_node].rect, sqrt(min_dist2_))) break; 
+            if(BWBTest(x_nom, y_nom, nodes[id_node].rect, query_data_.min_dist_)) break; 
 
             id_node = GET_PARENT_ID(id_node);
         }
@@ -325,22 +323,27 @@ void Quadtree::cachedNearestNeighborSearchPrivate(){
                     query_data_.id_node_matched = id_node;
                 }
 
-                if( BWBTest(x_nom, y_nom, nd.rect, sqrt(min_dist2_)) ) break; // the nearest point is inside the node.
+                if( BWBTest(x_nom, y_nom, nd.rect, query_data_.min_dist_) ) break; // the nearest point is inside the node.
             }
             else{ // this is not a leaf node.
-                // if BOB is not satisfied, dont go to the child
-                // if(nd.isActivated() 
-                if(IS_ACTIVATED(nd) 
-                && BOBTest(x_nom, y_nom, nd.rect, sqrt(min_dist2_)) ){ // if this node is overlapped by circle,
-                    // Ball is overlaped to this node.
-                    simple_stack_.addTotalAccess();
+                simple_stack_.addTotalAccess();
 
-                    // Go to child. Find most probable child first.
-                    ID id_child = GET_FIRST_CHILD_ID(id_node);
-                    if(IS_ACTIVATED(nodes[id_child]))   simple_stack_.push(id_child);
-                    if(IS_ACTIVATED(nodes[++id_child])) simple_stack_.push(id_child);
-                    if(IS_ACTIVATED(nodes[++id_child])) simple_stack_.push(id_child);
-                    if(IS_ACTIVATED(nodes[++id_child])) simple_stack_.push(id_child);
+                // Go to child. Find most probable child first.
+                ID id_child = GET_FIRST_CHILD_ID(id_node);
+                if(IS_ACTIVATED(nodes[id_child]) && BOBTest(x_nom, y_nom, nodes[id_child].rect, query_data_.min_dist_)) {
+                    simple_stack_.push(id_child);
+                }
+                ++id_child;
+                if(IS_ACTIVATED(nodes[id_child]) && BOBTest(x_nom, y_nom, nodes[id_child].rect, query_data_.min_dist_)) {
+                    simple_stack_.push(id_child);
+                }
+                ++id_child;
+                if(IS_ACTIVATED(nodes[id_child]) && BOBTest(x_nom, y_nom, nodes[id_child].rect, query_data_.min_dist_)) {
+                    simple_stack_.push(id_child);
+                }
+                ++id_child;
+                if(IS_ACTIVATED(nodes[id_child]) && BOBTest(x_nom, y_nom, nodes[id_child].rect, query_data_.min_dist_)) {
+                    simple_stack_.push(id_child);
                 }
             }
         }
@@ -353,7 +356,9 @@ void Quadtree::cachedNearestNeighborSearchPrivate(){
 
 // Find nearest element.
 // return : uint32_t id_data_matched.
-ID Quadtree::NNSearch(float x, float y){
+void Quadtree::NNSearch(float x, float y, 
+    uint32_t& id_data_matched, uint32_t& id_node_matched)
+{
     query_data_.x = x;
     query_data_.y = y;
     query_data_.x_nom = x*x_normalizer_;
@@ -367,16 +372,20 @@ ID Quadtree::NNSearch(float x, float y){
                             <<"," << all_elems_[query_data_.id_elem_matched].y_nom <<"]"
                             <<" / min dist: " << sqrt(query_data_.min_dist2_) << std::endl;
 #endif
-    return query_data_.id_node_matched;
+    id_data_matched = query_data_.id_data_matched;
+    id_node_matched = query_data_.id_node_matched;
 };
 
-ID Quadtree::NNSearchDebug(float x, float y, uint32_t& n_access){
-    ID id_matched = NNSearch(x,y);
+void Quadtree::NNSearchDebug(float x, float y, 
+    uint32_t& id_data_matched, uint32_t& id_node_matched, uint32_t& n_access)
+{
+    NNSearch(x,y, id_data_matched, id_node_matched);
     n_access = simple_stack_.getTotalAccess();
-    return id_matched;
 };
 
-ID Quadtree::cachedNNSearch(float x, float y, int id_node_cached){
+void Quadtree::cachedNNSearch(float x, float y, int id_node_cached, 
+    uint32_t& id_data_matched, uint32_t& id_node_matched)
+{
     query_data_.x = x;
     query_data_.y = y;
     query_data_.x_nom = x*x_normalizer_;
@@ -391,13 +400,15 @@ ID Quadtree::cachedNNSearch(float x, float y, int id_node_cached){
                             <<"," << all_elems_[query_data_.id_elem_matched].y_nom <<"]"
                             <<" / min dist: " << sqrt(query_data_.min_dist2_) << std::endl;
 #endif
-    return query_data_.id_node_matched;
+    id_data_matched = query_data_.id_data_matched;
+    id_node_matched = query_data_.id_node_matched;
 };
 
-ID Quadtree::cachedNNSearchDebug(float x, float y, int id_node_cached, uint32_t& n_access){
-    ID id_matched = cachedNNSearch(x,y,id_node_cached);
+void Quadtree::cachedNNSearchDebug(float x, float y, int id_node_cached, 
+    uint32_t& id_data_matched, uint32_t& id_node_matched, uint32_t& n_access)
+{
+    cachedNNSearch(x,y, id_node_cached, id_data_matched, id_node_matched);
     n_access = simple_stack_.getTotalAccess();
-    return id_matched;
 };
 
 inline void Quadtree::resetInsertData(){
@@ -412,6 +423,7 @@ inline void Quadtree::resetQueryData(){
     query_data_.id_node_cached  = 0;
     query_data_.id_node_matched = 0;
     query_data_.min_dist2_ = std::numeric_limits<float>::max();
+    query_data_.min_dist_  = std::numeric_limits<float>::max();
     query_data_.x     = -1.0f;
     query_data_.y     = -1.0f;
     query_data_.x_nom = -1.0f;

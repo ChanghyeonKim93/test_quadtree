@@ -5,28 +5,64 @@
 #include <random>
 #include <functional>
 
-#include "quadtree_fast.h"
+#include "quadtree_fast2.h"
 #include "timer.h"
 
 int main() {
     std::mt19937 engine((unsigned int)time(NULL));
-    std::uniform_real_distribution<> distribution(100.0, 600.0);
+    std::uniform_real_distribution<> distribution(30.0, 750.0);
     auto generator = std::bind(distribution, engine);
 
     float x_range[2] = {0.f,1032.f};
     float y_range[2] = {0.f,772.f};
-    uint32_t max_depth         = 14;
+    uint32_t max_depth         = 12;
     uint32_t max_elem_per_leaf = 50;
-    int n_pts = 20000;
+    
+    int n_pts = 2000;
+    std::vector<std::pair<float,float>> pts_data;
+    for(uint32_t i = 0; i < n_pts; ++i){
+        pts_data.push_back( std::make_pair<float,float>(generator(), generator()) );
+    }
+
+    int n_pts_q = 500;
+    std::vector<std::pair<float,float>> pts_q;
+    for(uint32_t i = 0; i < n_pts_q; ++i){
+        pts_q.push_back(std::make_pair<float,float>(generator(), generator()));
+    }
+
+    std::vector<uint32_t> id_node_matched_q;
+    std::vector<uint32_t> id_data_matched_q;
+    id_node_matched_q.resize(n_pts_q);
+    id_data_matched_q.resize(n_pts_q);
+
+    std::vector<double> min_dist2_true;
+    std::vector<uint32_t> id_data_matched_q_true;
+    min_dist2_true.resize(n_pts_q);
+    id_data_matched_q_true.resize(n_pts_q);
+
+    float x_normalizer = 1.0f/63.5039;
+    float y_normalizer = 1.0f/84.8912;
+
+    for(int i = 0; i < n_pts_q; ++i){
+        double min_dist2 = std::numeric_limits<double>::max();
+        uint32_t id_data_tmp = 0;
+        for(uint32_t j = 0; j < n_pts; ++j){
+            // double dist = DIST_EUCLIDEAN(pts_q[i].first*x_normalizer, pts_q[i].second*y_normalizer,
+            //                              pts_data[j].first*x_normalizer, pts_data[j].second*y_normalizer);
+
+            double dist = DIST_EUCLIDEAN(pts_q[i].first, pts_q[i].second,
+                                         pts_data[j].first, pts_data[j].second);
+            if( dist < min_dist2){
+                id_data_tmp = j;
+                min_dist2   = dist;
+            }
+        }
+
+        min_dist2_true[i]         = min_dist2;
+        id_data_matched_q_true[i] = id_data_tmp;
+    }
 
     try{
-        std::vector<std::pair<float,float>> points;
-        std::vector<uint32_t> ids_node_matched;
-        for(int i = 0; i<n_pts;++i){
-            points.push_back(std::make_pair<float,float>(generator(),generator()));
-        }
-        ids_node_matched.resize(n_pts);
-
         std::vector<float> time_construct(max_depth+1);
         std::vector<float> time_insert(max_depth+1);
 
@@ -35,10 +71,10 @@ int main() {
         std::vector<uint32_t> access_normal(max_depth+1);
         std::vector<uint32_t> access_cached(max_depth+1);
 
-        float x_step = 20.0; 
-        float y_step = 20.0;
-        
-        for(int d = 3; d <= max_depth; ++d){
+        std::vector<uint32_t> diff_normal(max_depth+1);
+        std::vector<uint32_t> diff_cached(max_depth+1);
+
+        for(int d = 0; d <= max_depth; ++d){
             timer::tic();
             std::shared_ptr<Quadtree> qt = nullptr;
             qt = std::make_shared<Quadtree>(
@@ -46,42 +82,67 @@ int main() {
             time_construct[d] = timer::toc(0);
 
             // Insert points
-            std::cout << "start insert..." << std::endl;
             timer::tic();
-            for(int i = 0; i < n_pts; ++i){
-                auto it = points[i];
-                qt->insert(it.first,it.second, i);
+            for(uint32_t i = 0; i < n_pts; ++i){
+                ID id_data = i;
+                qt->insert(pts_data[i].first, pts_data[i].second, id_data);
             }
             time_insert[d] = timer::toc(0);
-            std::cout << "insert done."<<std::endl;
 
             // normal matching
-            std::cout << "start normal matching..." << std::endl;
             timer::tic();
-            for(int i = 0; i < n_pts; i+=5){
+            for(uint32_t i = 0; i < n_pts_q; ++i){
                 uint32_t access_temp = 0;
-                ids_node_matched[i] = qt->NNSearchDebug(points[i].first+x_step, points[i].second+y_step, access_temp);
+                qt->NNSearchDebug(pts_q[i].first, pts_q[i].second, 
+                    id_data_matched_q[i], id_node_matched_q[i], access_temp);
                 access_normal[d] += access_temp;
             }
             time_normal[d] = timer::toc(0);
+            for(int i = 0; i < n_pts_q; ++i){
+                uint32_t id_mat = id_data_matched_q[i];
+                uint32_t id_mat_true = id_data_matched_q_true[i];
+
+                if(id_mat != id_mat_true){
+                    diff_normal[d]++;
+                    std::cout << "mismatched: " << id_mat <<"," <<id_mat_true <<" / " 
+                    << pts_data[id_mat].first <<"," << pts_data[id_mat].second
+                    <<" / " << pts_data[id_mat_true].first <<"," <<pts_data[id_mat_true].second 
+                    <<" / mindist2 (true,est):" << min_dist2_true[i] <<"," << 
+                    DIST_EUCLIDEAN(pts_data[id_mat].first, pts_data[id_mat].second, pts_q[i].first, pts_q[i].second) << std::endl;
+                } 
+            }
 
             // Cached matching
-            std::cout << "start cached matching..." << std::endl;
             timer::tic();
-            for(int i = 0; i < n_pts; i+=5){
-                uint32_t access_temp=0;
-                ids_node_matched[i] = qt->cachedNNSearchDebug(points[i].first+x_step, points[i].second+y_step, ids_node_matched[i],access_temp);
+            for(int i = 0; i < n_pts_q; ++i){
+                uint32_t access_temp = 0;
+                qt->cachedNNSearchDebug(pts_q[i].first, pts_q[i].second, id_node_matched_q[i],
+                    id_data_matched_q[i], id_node_matched_q[i], access_temp);
                 access_cached[d] += access_temp;
             }
             time_cached[d] = timer::toc(0);
+            
+            for(int i = 0; i < n_pts_q; ++i){
+                uint32_t id_mat = id_data_matched_q[i];
+                uint32_t id_mat_true = id_data_matched_q_true[i];
+
+                if(id_mat != id_mat_true){
+                    diff_cached[d]++;
+                    std::cout << "mismatched: " << id_mat <<"," <<id_mat_true <<" / "
+                    << pts_data[id_mat].first <<"," << pts_data[id_mat].second
+                    <<" / " << pts_data[id_mat_true].first <<"," <<pts_data[id_mat_true].second 
+                    <<" / mindist2 (true,est):" << min_dist2_true[i] <<"," << 
+                    DIST_EUCLIDEAN(pts_data[id_mat].first, pts_data[id_mat].second, pts_q[i].first, pts_q[i].second) << std::endl;
+                } 
+            }
         }       
 
         // Show the test results
-        for(int d = 0; d <= max_depth; ++d){
-
+        for(int d = 0; d <= max_depth; ++d) {
             std::cout << " depth [" << d <<"] generate: " << time_construct[d] <<", insert: " << time_insert[d]
             << ", normal/cached: " << time_normal[d] <<", " << time_cached[d] <<" / ";
-            std::cout <<"access normal/cached: " << access_normal[d] <<", " << access_cached[d] <<std::endl;
+            std::cout <<"access normal/cached: " << access_normal[d] <<", " << access_cached[d];
+            std::cout <<", diff normal/cached: "<< diff_normal[d] <<", " << diff_cached[d] <<std::endl;
         }
     }
     catch (std::exception& e){
