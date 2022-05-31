@@ -1,6 +1,6 @@
-#include "quadtree/quadtree_array.h"
+#include "quadtree/quadtree_array2.h"
 
-namespace ArrayBased{
+namespace ArrayBased2{
     Quadtree::Quadtree(
         float x_min, float x_max,
         float y_min, float y_max,
@@ -15,9 +15,6 @@ namespace ArrayBased{
         
         // Initialize a root node.
         MAKE_LEAF(nodes[1]); 
-
-        // Initialize node elements.
-        node_elements.resize(nodes.size());
 
         // Root size.
         QuadUint br_x = 1 << 13;
@@ -43,6 +40,9 @@ namespace ArrayBased{
     };
 
     Quadtree::~Quadtree() { 
+        for(auto const& it : elements_){
+            delete it;
+        }
         std::cout << "Quadtree is deleted.\n";
     };
 
@@ -54,12 +54,13 @@ namespace ArrayBased{
             float x_nom = x*x_normalizer_; float y_nom = y*y_normalizer_;
 
             // Add the input data as an Element object
-            all_elems_.push_back(Elem(x_nom,y_nom, (ID)id_data));
+            Elem* elem_new = new Elem(x_nom,y_nom, (ID)id_data);
+            elements_.push_back(elem_new);
             
             // Initialize the 'insert_data_' 
             // This is to avoid recursive copies of recursive call of function inputs) 
-            insert_data_.setData(x_nom, y_nom, all_elems_.size()-1);
-
+            insert_data_.setData(x_nom, y_nom, elem_new);
+            
             // Insert query_data_ into the quadtree.
             // this->insertPrivate(1, 0); // Recursion-based approach (DFS)
             this->insertPrivateStack(); // Stack-based approach (DFS), faster than Recursion-based one 1.2 times.
@@ -69,8 +70,7 @@ namespace ArrayBased{
 
     void Quadtree::insertPrivate(ID id_node, uint8_t depth)
     {
-        QuadNode&              nd = nodes[id_node]; // current node.
-        QuadNodeElements& ndelems = node_elements[id_node];
+        QuadNode& nd = nodes[id_node]; // current node.
         nd.depth = depth;
         
         float& x_nom = insert_data_.x_nom;
@@ -85,7 +85,6 @@ namespace ArrayBased{
             insertPrivate(id_child, depth + 1); // Go to the selected child
         }
         else if(IS_LEAF(nd)) { // This is a leaf node.
-            // addDataToNode(id_node, insert_data_.id_elem);
             addDataToNode(id_node, insert_data_.elem);
 
             if(depth < max_depth_){ // nonmax depth.
@@ -97,13 +96,19 @@ namespace ArrayBased{
                     n_node_activated_ += 4;
 
                     // Do divide.
-                    for(const ID& id_elem_tmp : ndelems.elem_ids) {
+                    Elem* elem_tmp = nd.elem;
+                    while(elem_tmp->next != nullptr){
+                        Elem* elem_next = elem_tmp->next;
+
+                        elem_tmp->next = nullptr;
+
                         Flag flag_sn, flag_ew;
-                        Elem& elem_tmp = all_elems_[id_elem_tmp];
-                        FIND_QUADRANT(elem_tmp.x_nom, elem_tmp.y_nom, nd.rect, flag_sn, flag_ew);
+                        FIND_QUADRANT(elem_tmp->x_nom, elem_tmp->y_nom, nd.rect, flag_sn, flag_ew);
                         ID id_child = GET_CHILD_ID_FLAGS(id_node, flag_sn, flag_ew);
-                        // addDataToNode(id_child, id_elem_tmp);
-                        addDataToNode(id_child, id_elem_tmp);
+                        
+                        addDataToNode(id_child, elem_tmp);
+                        nodes[id_child].depth = depth + 1;
+                        elem_tmp = elem_next;
                     }
 
                     //make this node as a branch
@@ -118,13 +123,11 @@ namespace ArrayBased{
     {
         float& x_nom = insert_data_.x_nom;
         float& y_nom = insert_data_.y_nom;
+
         ID id_node = 1;
         nodes[1].depth = 0;
-
         while(true){
-            QuadNode&              nd = nodes[id_node]; // current node.
-            QuadNodeElements& ndelems = node_elements[id_node];
-
+            QuadNode& nd = nodes[id_node]; // current node.
             int depth = nd.depth;
 
             if(IS_BRANCH(nd)) {
@@ -137,7 +140,7 @@ namespace ArrayBased{
                 id_node = id_child;
             }
             else if(IS_LEAF(nd)) { // This is a leaf node.
-                addDataToNode(id_node, insert_data_.id_elem);
+                addDataToNode(id_node, insert_data_.elem);
 
                 if(depth < max_depth_){ // nonmax depth.
                     int n_elem = getNumElemOfNode(id_node);
@@ -148,13 +151,19 @@ namespace ArrayBased{
                         n_node_activated_ += 4;
 
                         // Do divide.
-                        for(const ID& id_elem_tmp : ndelems.elem_ids) {
+                        Elem* elem_tmp = nd.elem;
+                        while(elem_tmp != nullptr){
+                            Elem* elem_next = elem_tmp->next; // pointing next one.
+
+                            elem_tmp->next = nullptr; // current elem.
+                            
                             Flag flag_sn, flag_ew;
-                            Elem& elem_tmp = all_elems_[id_elem_tmp];
-                            FIND_QUADRANT(elem_tmp.x_nom, elem_tmp.y_nom, nd.rect, flag_sn, flag_ew);
+                            FIND_QUADRANT(elem_tmp->x_nom, elem_tmp->y_nom, nd.rect, flag_sn, flag_ew);
                             ID id_child = GET_CHILD_ID_FLAGS(id_node, flag_sn, flag_ew);
+                            
+                            addDataToNode(id_child, elem_tmp);
                             nodes[id_child].depth = depth + 1;
-                            addDataToNode(id_child, id_elem_tmp);
+                            elem_tmp = elem_next;
                         }
 
                         //make this node as a branch
@@ -169,35 +178,23 @@ namespace ArrayBased{
         
     };
 
-    inline void Quadtree::addDataToNode(ID id_node, ID id_elem){
-        node_elements[id_node].elem_ids.push_back(id_elem);
-    };
-
     inline void Quadtree::addDataToNode(ID id_node, Elem* elem){
-        nodes[id_node].elem->next = elem; 
-    };
-
-
-    bool Quadtree::findNearestElem(float x, float y, const QuadNodeElements& elems_thisnode){
-        bool findNewNearest = false;
-        for(const ID& id_elem : elems_thisnode.elem_ids){
-            Elem& elem = all_elems_[id_elem];
-            float dist_temp = DIST_EUCLIDEAN(x,y, elem.x_nom,elem.y_nom);
-            if(dist_temp < query_data_.min_dist2_){
-                this->query_data_.id_data_matched = elem.id_data;
-                this->query_data_.min_dist2_      = dist_temp * params_.approx_rate;
-                this->query_data_.min_dist_       = sqrt(query_data_.min_dist2_);
-                findNewNearest  = true;
+        if(nodes[id_node].elem == nullptr) nodes[id_node].elem = elem;
+        else {
+            // find tail!
+            Elem* tail = nodes[id_node].elem;
+            while(tail->next != nullptr){
+                tail = tail->next;
             }
+            tail->next = elem;
         }
-        return findNewNearest;
+        ++nodes[id_node].n_elem;
     };
 
-    bool Quadtree::findNearestElem(float x, float y, const Elem* elem_first){
+    bool Quadtree::findNearestElem(float x, float y, const ID& id_node){
         bool findNewNearest = false;
-        const Elem* elem_ptr = elem_first;
-        while(elem_ptr->next != nullptr){
-            elem_ptr = elem_ptr->next;
+        Elem* elem_ptr = nodes[id_node].elem;
+        while(elem_ptr != nullptr){
             float dist_temp = DIST_EUCLIDEAN(x,y, elem_ptr->x_nom, elem_ptr->y_nom);
             if(dist_temp < query_data_.min_dist2_){
                 this->query_data_.id_data_matched = elem_ptr->id_data;
@@ -205,22 +202,14 @@ namespace ArrayBased{
                 this->query_data_.min_dist_       = sqrt(query_data_.min_dist2_);
                 findNewNearest  = true;
             }
+            elem_ptr = elem_ptr->next;
         }
         return findNewNearest;
     };
 
-    // inline int Quadtree::getNumElemOfNode(ID id_node){
-    //     return node_elements[id_node].elem_ids.size();
-    // };
 
     inline int Quadtree::getNumElemOfNode(ID id_node){
-        uint32_t cnt = 0;
-        const Elem* elem_ptr = (const Elem*)nodes[id_node].elem;
-        while(elem_ptr->next != nullptr){
-            elem_ptr = elem_ptr->next;
-            ++cnt;
-        }
-        return cnt;
+        return nodes[id_node].n_elem;
     };
 
     inline void Quadtree::makeChildrenLeaves(ID id_child, const QuadRect_u& rect){
@@ -246,7 +235,7 @@ namespace ArrayBased{
 
     inline void Quadtree::makeBranch(ID id_node){
         MAKE_BRANCH(nodes[id_node]);
-        node_elements[id_node].reset();
+        nodes[id_node].elem = nullptr;
     };
 
     inline bool Quadtree::BWBTest(float x, float y, const QuadRect_u& rect, float radius){
@@ -288,7 +277,6 @@ namespace ArrayBased{
         // In this function, search the nearest element from the scratch (from the root node)
         float x_nom = query_data_.x_nom;
         float y_nom = query_data_.y_nom;
-        ID& id_data_matched = query_data_.id_data_matched;
         ID& id_node_matched = query_data_.id_node_matched;
 
         // Initialize NN parameters
@@ -306,8 +294,7 @@ namespace ArrayBased{
             // if(nd.isLeaf()){
             if(IS_LEAF(nd)){
                 simple_stack_.addTotalAccess();
-                QuadNodeElements& nd_elems = node_elements[id_node];
-                if(findNearestElem(x_nom, y_nom, nd_elems)) {
+                if(findNearestElem(x_nom, y_nom, id_node)) {
                     id_node_matched = id_node;
                 }
 
@@ -343,7 +330,6 @@ namespace ArrayBased{
         // In this function, search the nearest element from the scratch (from the root node)
         float& x_nom = query_data_.x_nom;
         float& y_nom = query_data_.y_nom;
-        ID& id_data_matched = query_data_.id_data_matched;
         
         // Initialize NN parameters
         resetNNParameters();
@@ -361,7 +347,7 @@ namespace ArrayBased{
             simple_stack_.addTotalAccess();
 
             // Find nearest point in the cached node.
-            findNearestElem(x_nom, y_nom, node_elements[query_data_.id_node_matched]);
+            findNearestElem(x_nom, y_nom, query_data_.id_node_matched);
             if( BWBTest(x_nom, y_nom, nodes[query_data_.id_node_matched].rect, query_data_.min_dist_) ) {
                 // the nearest point is inside the cached node.
                 return;
@@ -394,8 +380,7 @@ namespace ArrayBased{
                 // if(nd.isLeaf()){
                 if(IS_LEAF(nd)){
                     simple_stack_.addTotalAccess();
-                    QuadNodeElements& nd_elems = node_elements[id_node];
-                    if(findNearestElem(x_nom, y_nom, nd_elems)) {
+                    if(findNearestElem(x_nom, y_nom, id_node)) {
                         query_data_.id_node_matched = id_node;
                     }
 
@@ -471,7 +456,7 @@ namespace ArrayBased{
     };
 
     inline void Quadtree::resetInsertData(){
-        insert_data_.id_elem = 0; 
+        insert_data_.elem = nullptr;
         insert_data_.x_nom   = -1.0f;
         insert_data_.y_nom   = -1.0f;
     };

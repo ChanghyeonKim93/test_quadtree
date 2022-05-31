@@ -6,7 +6,7 @@
 #include "simple_stack.h"
 #include "quadtree/macro_quadtree.h"
 
-namespace ArrayBased{
+namespace ArrayBased2{
     typedef uint32_t ID; // 4 bytes
     typedef uint8_t  Flag; // 1 bytes
 
@@ -65,23 +65,14 @@ namespace ArrayBased{
             Elem* next;
             float x_nom;   // 4 bytes
             float y_nom;   // 4 bytes
-            ID    id_data; // 4 bytes
+            ID    id_data; // 4 bytes, (external index)
 
             Elem() : next(nullptr), id_data(0), x_nom(-1.0f), y_nom(-1.0f) { };
             Elem(float x_nom_, float y_nom_, int id_data_)
-            : next(nullptr), id_data(id_data_), x_nom(x_nom_), y_nom(y_nom_) { };
+                : next(nullptr), id_data(id_data_), x_nom(x_nom_), y_nom(y_nom_) { };
         };
 
-        struct QuadNodeElements{ // 8 bytes
-            // Stores the ID for the element (can be used to refer to external data).
-            std::vector<ID> elem_ids; // 8 bytes
-
-            QuadNodeElements()  { elem_ids.resize(0); };
-            inline void reset() { elem_ids.resize(0); };
-            inline int getNumElem() const { return elem_ids.size(); };
-        };
-
-        struct QuadNode{ // 18 bytes (actually 10 bytes)
+        struct QuadNode{ // 19 bytes (actually 10 bytes)
             // AABB (Axis-alinged Bounding box) is not contained, but just 
             // they are just calculated on the fly if needed.
             // This is more efficient because reducing the memory use of a node can 
@@ -92,15 +83,16 @@ namespace ArrayBased{
             // If -2, not initialized (no children.) 
             // else if -1,  branch node. (children exist.)
             // else, leaf node.
-            uint8_t state; // 1 byte (-2 : unactivated, -1: branch, 0: leaf)
-            int8_t  depth; // 1 byte
+            uint8_t state;  // 1 byte (-2 : unactivated, -1: branch, 0: leaf)
+            int8_t  depth;  // 1 byte
+            uint8_t n_elem; // 1 byte 
 
     #define STATE_UNACTIVATED 0b0000 // 0
     #define STATE_ACTIVATED   0b0001 // 1 (0b0001)
     #define STATE_BRANCH      0b0011 // 2 (0b0011)
     #define STATE_LEAF        0b0101 // 4 (0b0101)
 
-            QuadNode() : state(STATE_UNACTIVATED), depth(-1), elem(nullptr) {};
+            QuadNode() : state(STATE_UNACTIVATED), depth(-1), elem(nullptr), n_elem(0) {};
             friend std::ostream& operator<<(std::ostream& os, const QuadNode& c){
                 os << "count:[" << c.state <<"]";
                 return os;
@@ -111,9 +103,9 @@ namespace ArrayBased{
     #define IS_BRANCH(nd)      ( (nd).state == STATE_BRANCH   )
     #define IS_LEAF(nd)        ( (nd).state == STATE_LEAF     )
 
-    #define MAKE_UNACTIVATE(nd)( (nd).state = STATE_UNACTIVATED)
+    #define MAKE_UNACTIVATE(nd){ (nd).state = STATE_UNACTIVATED; (nd).n_elem = 0;}
     #define MAKE_ACTIVATE(nd)  ( (nd).state = STATE_ACTIVATED  )
-    #define MAKE_BRANCH(nd)    ( (nd).state = STATE_BRANCH     )
+    #define MAKE_BRANCH(nd)    { (nd).state = STATE_BRANCH; (nd).n_elem = 0; }
     #define MAKE_LEAF(nd)      ( (nd).state = STATE_LEAF       )
         }; 
 
@@ -121,18 +113,17 @@ namespace ArrayBased{
         struct InsertData{ // 12 bytes (actually 16 bytes)
             float x_nom;   // 4 bytes
             float y_nom;   // 4 bytes
-            ID    id_elem; // 4 bytes
-            Elem* elem;
+            Elem* elem;    // current element pointer
 
-            InsertData() : x_nom(-1.0f), y_nom(-1.0f), id_elem(0), elem(nullptr){};
-            void setData(float x_nom_, float y_nom_, ID id_elem_){
+            InsertData() : x_nom(-1.0f), y_nom(-1.0f), elem(nullptr){};
+            void setData(float x_nom_, float y_nom_, Elem* elem_){
                 x_nom   = x_nom_; 
                 y_nom   = y_nom_;
-                id_elem = id_elem_;
+                elem    = elem_;
             };
         };
 
-        struct QuaryData{
+        struct QueryData{
             float x; // 4 bytes
             float y; // 4 bytes
             float x_nom; // 4 bytes
@@ -179,7 +170,6 @@ namespace ArrayBased{
 
         inline void makeChildrenLeaves(ID id_child, const QuadRect_u& rect);
 
-        // inline void addDataToNode(ID id_node, ID id_elem);
         inline void addDataToNode(ID id_node, Elem* elem);
         inline int getNumElemOfNode(ID id_node);
 
@@ -191,8 +181,7 @@ namespace ArrayBased{
         
         inline bool BWBTest( float x, float y, const QuadRect_u& rect, float radius); // Ball Within Bound
         inline bool BOBTest( float x, float y, const QuadRect_u& rect, float radius); // Ball Overlap Bound
-        // bool findNearestElem(float x, float y, const QuadNodeElements& elems);
-        bool findNearestElem(float x, float y, const Elem* elem_first);
+        bool findNearestElem(float x, float y, const ID& id_node);
 
     // Related to cached NN search (private)
     private:
@@ -203,8 +192,7 @@ namespace ArrayBased{
 
     private:
         // Stores all the elements in the quadtree.
-        std::vector<Elem>  all_elems_;
-        std::vector<QuadNodeElements> node_elements;
+        std::vector<Elem*>  elements_;
 
     private:
         // Stores all the nodes in the quadtree. The second node in this
@@ -242,7 +230,7 @@ namespace ArrayBased{
 
     // For nearest neighbor search algorithm
     private:
-        QuaryData query_data_;
+        QueryData query_data_;
         SimpleStack<ID> simple_stack_;
 
         inline void resetNNParameters();
