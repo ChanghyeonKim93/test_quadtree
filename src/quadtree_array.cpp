@@ -1,4 +1,4 @@
-#include "quadtree_fast2.h"
+#include "quadtree_array.h"
 
 Quadtree::Quadtree(
     float x_min, float x_max,

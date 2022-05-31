@@ -1,10 +1,10 @@
-#ifndef _QUADTREE_FAST2_H_
-#define _QUADTREE_FAST2_H_
+#ifndef _QUADTREE_ARRAY_H_
+#define _QUADTREE_ARRAY_H_
 #include <iostream>
 #include <vector>
 #include <cmath>
 #include "simple_stack.h"
-#include "macros2.h"
+#include "macro_quadtree_array.h"
 
 // #define VERBOSE_
 

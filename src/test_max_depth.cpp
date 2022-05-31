@@ -6,7 +6,7 @@
 #include <random>
 #include <functional>
 
-#include "quadtree_fast2.h"
+#include "quadtree_array.h"
 #include "timer.h"
 
 int main() {
