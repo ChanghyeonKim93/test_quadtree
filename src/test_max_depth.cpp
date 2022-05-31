@@ -1,6 +1,7 @@
 #include <iostream>
 #include <memory>
 #include <vector>
+#include <algorithm>
 
 #include <random>
 #include <functional>
@@ -15,10 +16,10 @@ int main() {
 
     float x_range[2] = {0.f,1032.f};
     float y_range[2] = {0.f,772.f};
-    uint32_t max_depth         = 12;
-    uint32_t max_elem_per_leaf = 20;
+    uint32_t max_depth         = 10;
+    uint32_t max_elem_per_leaf = 10;
     
-    int n_pts = 20000;
+    int n_pts = 90000;
     std::vector<std::pair<float,float>> pts_data;
     for(uint32_t i = 0; i < n_pts; ++i){
         pts_data.push_back( std::make_pair<float,float>(generator(), generator()) );
@@ -40,18 +41,13 @@ int main() {
     min_dist2_true.resize(n_pts_q);
     id_data_matched_q_true.resize(n_pts_q);
 
-    float x_normalizer = 1.0f/63.5039;
-    float y_normalizer = 1.0f/84.8912;
-
-    for(int i = 0; i < n_pts_q; ++i){
+    for(uint32_t i = 0; i < n_pts_q; ++i){
         double min_dist2 = std::numeric_limits<double>::max();
         uint32_t id_data_tmp = 0;
         for(uint32_t j = 0; j < n_pts; ++j){
-            // double dist = DIST_EUCLIDEAN(pts_q[i].first*x_normalizer, pts_q[i].second*y_normalizer,
-            //                              pts_data[j].first*x_normalizer, pts_data[j].second*y_normalizer);
+            double dist = DIST_EUCLIDEAN(pts_q[i].first, pts_q[i].second, 
+                pts_data[j].first, pts_data[j].second);
 
-            double dist = DIST_EUCLIDEAN(pts_q[i].first, pts_q[i].second,
-                                         pts_data[j].first, pts_data[j].second);
             if( dist < min_dist2){
                 id_data_tmp = j;
                 min_dist2   = dist;
@@ -69,16 +65,28 @@ int main() {
         std::vector<float> time_normal(max_depth+1);
         std::vector<float> time_cached(max_depth+1);
         std::vector<uint32_t> access_normal(max_depth+1);
+        std::vector<double> min_access_normal(max_depth+1);
+        std::vector<double> max_access_normal(max_depth+1);
+        std::vector<double> avg_access_normal(max_depth+1);
+        std::vector<double> std_access_normal(max_depth+1);
+
         std::vector<uint32_t> access_cached(max_depth+1);
+        std::vector<double> min_access_cached(max_depth+1);
+        std::vector<double> max_access_cached(max_depth+1);
+        std::vector<double> avg_access_cached(max_depth+1);
+        std::vector<double> std_access_cached(max_depth+1);
 
         std::vector<uint32_t> diff_normal(max_depth+1);
         std::vector<uint32_t> diff_cached(max_depth+1);
+
+        float approx_rate = 1;
 
         for(int d = 0; d <= max_depth; ++d){
             timer::tic();
             std::shared_ptr<Quadtree> qt = nullptr;
             qt = std::make_shared<Quadtree>(
-                x_range[0],x_range[1],y_range[0], y_range[1], d, max_elem_per_leaf);
+                x_range[0],x_range[1],y_range[0], y_range[1], d, max_elem_per_leaf,
+                approx_rate);
             time_construct[d] = timer::toc(0);
 
             // Insert points
@@ -87,17 +95,34 @@ int main() {
                 ID id_data = i;
                 qt->insert(pts_data[i].first, pts_data[i].second, id_data);
             }
+
+            std::cout << "# nodes - total / activated / ratio: " 
+            << qt->getNumNodes() <<", " << qt->getNumNodesActivated() <<", " 
+            << (double)qt->getNumNodesActivated()/(double)qt->getNumNodes()*100.0 << " % " << std::endl;
+
             time_insert[d] = timer::toc(0);
 
             // normal matching
+            std::vector<uint32_t> accesses;
             timer::tic();
             for(uint32_t i = 0; i < n_pts_q; ++i){
                 uint32_t access_temp = 0;
                 qt->NNSearchDebug(pts_q[i].first, pts_q[i].second, 
                     id_data_matched_q[i], id_node_matched_q[i], access_temp);
                 access_normal[d] += access_temp;
+                accesses.push_back(access_temp);
             }
             time_normal[d] = timer::toc(0);
+            std::sort(accesses.begin(),accesses.end());
+            min_access_normal[d] = accesses.front();
+            max_access_normal[d] = accesses.back();
+            double sum = std::accumulate(accesses.begin(), accesses.end(), 0.0);
+            double mean = sum / accesses.size();
+            double sq_sum = std::inner_product(accesses.begin(), accesses.end(), accesses.begin(), 0.0);
+            double stdev = std::sqrt(sq_sum / accesses.size() - mean * mean);
+            avg_access_normal[d] = mean;
+            std_access_normal[d] = stdev;
+            
             for(int i = 0; i < n_pts_q; ++i){
                 uint32_t id_mat = id_data_matched_q[i];
                 uint32_t id_mat_true = id_data_matched_q_true[i];
@@ -113,12 +138,14 @@ int main() {
             }
 
             // Cached matching
+            accesses.resize(0);
             timer::tic();
             for(int i = 0; i < n_pts_q; ++i){
                 uint32_t access_temp = 0;
                 qt->cachedNNSearchDebug(pts_q[i].first, pts_q[i].second, id_node_matched_q[i],
                     id_data_matched_q[i], id_node_matched_q[i], access_temp);
                 access_cached[d] += access_temp;
+                accesses.push_back(access_temp);
             }
             time_cached[d] = timer::toc(0);
             
@@ -135,14 +162,33 @@ int main() {
                     DIST_EUCLIDEAN(pts_data[id_mat].first, pts_data[id_mat].second, pts_q[i].first, pts_q[i].second) << std::endl;
                 } 
             }
+            std::sort(accesses.begin(),accesses.end());
+            min_access_cached[d] = accesses.front();
+            max_access_cached[d] = accesses.back();
+            sum = std::accumulate(accesses.begin(), accesses.end(), 0.0);
+            mean = sum / accesses.size();
+            sq_sum = std::inner_product(accesses.begin(), accesses.end(), accesses.begin(), 0.0);
+            stdev = std::sqrt(sq_sum / accesses.size() - mean * mean);
+            avg_access_cached[d] = mean;
+            std_access_cached[d] = stdev;
         }       
 
         // Show the test results
+        std::cout << "==== TIME ANALYSIS ====\n";
         for(int d = 0; d <= max_depth; ++d) {
-            std::cout << " depth [" << d <<"] generate: " << time_construct[d] <<", insert: " << time_insert[d]
-            << ", normal/cached: " << time_normal[d] <<", " << time_cached[d] <<" / ";
-            std::cout <<"access normal/cached: " << access_normal[d] <<", " << access_cached[d];
-            std::cout <<", diff normal/cached: "<< diff_normal[d] <<", " << diff_cached[d] <<std::endl;
+            std::cout << " depth[" << d <<"] - (normal/cached)" 
+            <<"tree build: "<< time_construct[d] <<", "
+            <<"insert: " << time_insert[d] <<", "
+            <<"NN search: " << time_normal[d] <<", " << time_cached[d] <<"\n";
+        }
+        std::cout << "==== ACCESS ANALYSIS ====\n";
+        for(int d = 0; d < max_depth; ++d){
+            std::cout << " depth[" << d <<"] - (normal/cached)" 
+            << "total access: " << access_normal[d] <<", " << access_cached[d] <<" / "
+            << "min access: " << min_access_normal[d] <<"," << min_access_cached[d] <<" / "
+            << "max access: " << max_access_normal[d] <<"," << max_access_cached[d] <<" / "
+            << "avg access: " << avg_access_normal[d] <<"," << avg_access_cached[d] <<" / "
+            << "std access: " << std_access_normal[d] <<"," << std_access_cached[d] << std::endl;
         }
     }
     catch (std::exception& e){

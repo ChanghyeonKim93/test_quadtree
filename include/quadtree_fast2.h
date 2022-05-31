@@ -147,15 +147,16 @@ private:
 
     struct QuadParams{
         // Distance parameter
-        uint8_t flag_approx_dist;
         float approx_rate; // 0.3~1.0;
         
         // Searching parameter
-        uint8_t flag_adjacent_only;
+        uint8_t flag_adj_search_only;
     };
 
 public:
-    Quadtree(float x_min, float x_max, float y_min, float y_max, uint32_t max_depth, uint32_t max_elem_per_leaf);
+    Quadtree(float x_min, float x_max, float y_min, float y_max, 
+        uint32_t max_depth, uint32_t max_elem_per_leaf,
+        float approx_rate = 1.0, uint8_t flag_adj = false);
     ~Quadtree();
 
     void insert(float x, float y, int id_data);
@@ -172,8 +173,7 @@ public:
 // Related to generate tree.
 private:
     void insertPrivate(ID id_node, uint8_t depth);
-    inline void getQuadrant(float x, float y, const QuadRect_u32& qrect, 
-        Flag& flag_sn, Flag& flag_ew);
+    void insertPrivateStack();
 
     inline void makeChildrenLeaves(ID id_child, const QuadRect_u32& rect);
 
@@ -208,6 +208,7 @@ private:
     // index 0 is not used.
     std::vector<QuadNode> nodes;
     uint32_t n_nodes_;
+    uint32_t n_node_activated_;
     // |  1  |  2  |  3  |  4  |  5  |  ...
     // | root| tl0 | bl0 | tr0 | br0 |  ...
     // Z-order
@@ -217,6 +218,10 @@ private:
 
     float x_normalizer_;
     float y_normalizer_;
+
+public:
+    uint32_t getNumNodes();
+    uint32_t getNumNodesActivated();
 
 
 private: 
@@ -238,6 +243,7 @@ private:
 
     inline void resetNNParameters();
     inline void resetQueryData();
+
 };
 
 #endif
