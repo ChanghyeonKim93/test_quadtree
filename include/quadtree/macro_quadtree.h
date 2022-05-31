@@ -1,5 +1,5 @@
-#ifndef _MACROS_QUADTREE_ARRAY_H_
-#define _MACROS_QUADTREE_ARRAY_H_
+#ifndef _MACROS_QUADTREE_H_
+#define _MACROS_QUADTREE_H_
 
 // Distance calculations
 #define DIST_EUCLIDEAN(x,y,x_,y_) (((x)-(x_))*((x)-(x_))+((y)-(y_))*((y)-(y_)))

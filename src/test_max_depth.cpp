@@ -6,8 +6,10 @@
 #include <random>
 #include <functional>
 
-#include "quadtree_array.h"
+#include "quadtree/quadtree_array.h"
 #include "timer.h"
+
+typedef ArrayBased::ID ID;
 
 int main() {
     std::mt19937 engine((unsigned int)time(NULL));
@@ -83,8 +85,8 @@ int main() {
 
         for(int d = 0; d <= max_depth; ++d){
             timer::tic();
-            std::shared_ptr<Quadtree> qt = nullptr;
-            qt = std::make_shared<Quadtree>(
+            std::shared_ptr<ArrayBased::Quadtree> qt = nullptr;
+            qt = std::make_shared<ArrayBased::Quadtree>(
                 x_range[0],x_range[1],y_range[0], y_range[1], d, max_elem_per_leaf,
                 approx_rate);
             time_construct[d] = timer::toc(0);

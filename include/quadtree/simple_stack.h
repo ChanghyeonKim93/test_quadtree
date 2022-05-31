@@ -5,7 +5,7 @@
 template <typename T>
 class SimpleStack {
 public:	
-    SimpleStack() : MAX_SIZE(1000000), size_(0), total_access_(0) {
+    SimpleStack() : MAX_SIZE(65536), size_(0), total_access_(0) {
 		values_ = (T*)malloc(sizeof(T)*MAX_SIZE); // 8 * max_size
 	};
 

@@ -11,7 +11,8 @@ include_directories( ${includeDirs} )
 
 set(SRC ${SRC} 
     # src/quadtree_fast.cpp
-    src/quadtree_array.cpp
+    src/quadtree/quadtree_array.cpp
+    src/quadtree/quadtree_pointer.cpp
     src/timer.cpp
 )
 
