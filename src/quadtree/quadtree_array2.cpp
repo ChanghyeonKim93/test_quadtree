@@ -181,12 +181,10 @@ namespace ArrayBased2{
     inline void Quadtree::addDataToNode(ID id_node, Elem* elem){
         if(nodes[id_node].elem == nullptr) nodes[id_node].elem = elem;
         else {
-            // find tail!
-            Elem* tail = nodes[id_node].elem;
-            while(tail->next != nullptr){
-                tail = tail->next;
-            }
-            tail->next = elem;
+            // append front
+            Elem* tmp = nodes[id_node].elem;
+            nodes[id_node].elem = elem;
+            elem->next = tmp;
         }
         ++nodes[id_node].n_elem;
     };
