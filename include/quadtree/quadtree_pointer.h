@@ -4,6 +4,7 @@
 #include <vector>
 #include <cmath>
 #include "quadtree/simple_stack.h"
+#include "quadtree/object_pool.h"
 
 namespace PointerBased{
     typedef uint32_t ID; // 4 bytes
@@ -60,19 +61,37 @@ namespace PointerBased{
         typedef QuadRect<QuadUint> QuadRect_u;
         typedef QuadRect<float>    QuadRect_f;
 
-        struct QuadNode{ // 26 bytes
-            QuadRect_u rect; // 2 * 4 (8)
-            QuadNode* parent; // 8
-            QuadNode* first_child; // 8
-            uint8_t state; // 1
-            int8_t depth; // 1
+        struct Elem;
+        typedef Elem* ElemPtr;
+        struct Elem{ // 20 bytes (actually 16 bytes)
+            ElemPtr next;
+            float   x_nom;   // 4 bytes
+            float   y_nom;   // 4 bytes
+            ID      id_data; // 4 bytes, (external index)
+
+            Elem() : next(nullptr), id_data(0), x_nom(-1.0f), y_nom(-1.0f) { };
+            Elem(float x_nom_, float y_nom_, int id_data_)
+                : next(nullptr), id_data(id_data_), x_nom(x_nom_), y_nom(y_nom_) { };
+        };
+
+        struct QuadNode;
+        typedef QuadNode* QuadNodePtr;
+        struct QuadNode{ // 34 bytes
+            QuadRect_u  rect; // 2 * 4 (8)
+            ElemPtr     elem; // 8 bytes
+            QuadNodePtr parent; // 8
+            QuadNodePtr first_child; // 8
+            uint8_t     state; // 1
+            int8_t      depth; // 1
 
     #define STATE_UNACTIVATED 0b0000 // 0
     #define STATE_ACTIVATED   0b0001 // 1 (0b0001)
     #define STATE_BRANCH      0b0011 // 2 (0b0011)
     #define STATE_LEAF        0b0101 // 4 (0b0101)
 
-            QuadNode() : state(STATE_UNACTIVATED), depth(-1), parent(nullptr), first_child(nullptr) {};
+            QuadNode() 
+            : state(STATE_UNACTIVATED), elem(nullptr),
+            depth(-1), parent(nullptr), first_child(nullptr) {};
             friend std::ostream& operator<<(std::ostream& os, const QuadNode& c){
                 os << "count:[" << c.state <<"]";
                 return os;
@@ -83,9 +102,9 @@ namespace PointerBased{
     #define IS_BRANCH(nd)      ( (nd).state == STATE_BRANCH   )
     #define IS_LEAF(nd)        ( (nd).state == STATE_LEAF     )
 
-    #define MAKE_UNACTIVATE(nd)( (nd).state = STATE_UNACTIVATED)
+    #define MAKE_UNACTIVATE(nd){ (nd).state = STATE_UNACTIVATED; (nd).n_elem = 0;}
     #define MAKE_ACTIVATE(nd)  ( (nd).state = STATE_ACTIVATED  )
-    #define MAKE_BRANCH(nd)    ( (nd).state = STATE_BRANCH     )
+    #define MAKE_BRANCH(nd)    { (nd).state = STATE_BRANCH; (nd).n_elem = 0; }
     #define MAKE_LEAF(nd)      ( (nd).state = STATE_LEAF       )
 
             // void initializeChildren() {
@@ -101,37 +120,16 @@ namespace PointerBased{
             // };
         };
 
-        typedef QuadNode* QuadNodePtr;
-
-        struct QuadElement{ // 12 bytes (actually 16 bytes)
-            float  x_nom;   // 4 bytes
-            float  y_nom;   // 4 bytes
-            ID     id_data; // 4 bytes
-
-            QuadElement() : id_data(0),x_nom(-1.0f),y_nom(-1.0f) { };
-            QuadElement(float x_nom_, float y_nom_, int id_data_)
-            : id_data(id_data_), x_nom(x_nom_), y_nom(y_nom_) { };
-        };
-
-        struct QuadNodeElements{ // 8 bytes
-            // Stores the ID for the element (can be used to refer to external data).
-            std::vector<ID> elem_ids; // 8 bytes
-
-            QuadNodeElements()  { elem_ids.resize(0); };
-            inline void reset() { elem_ids.resize(0); };
-            inline int getNumElem() const { return elem_ids.size(); };
-        };
-
-        struct InsertData{ // 12 bytes (actually 16 bytes)
+        struct InsertData{ // 16 bytes (actually 16 bytes)
             float x_nom;   // 4 bytes
             float y_nom;   // 4 bytes
-            ID    id_elem; // 4 bytes
+            ElemPtr elem;    // 8 bytes
 
-            InsertData() : x_nom(-1.0f), y_nom(-1.0f), id_elem(0){};
-            void setData(float x_nom_, float y_nom_, ID id_elem_){
-                x_nom   = x_nom_; 
-                y_nom   = y_nom_;
-                id_elem = id_elem_;
+            InsertData() : x_nom(-1.0f), y_nom(-1.0f), elem(nullptr){};
+            void setData(float x_nom_, float y_nom_, ElemPtr elem_){
+                x_nom = x_nom_; 
+                y_nom = y_nom_;
+                elem  = elem_;
             };
         };
 
@@ -141,11 +139,10 @@ namespace PointerBased{
             float x_nom; // 4 bytes
             float y_nom; // 4 bytes
 
-            ID id_node_cached; // 4 bytes
+            QuadNodePtr ptr_node_cached; // 4 bytes
 
-            ID id_data_matched; // 4 bytes
-            ID id_node_matched; // 4 bytes
-            ID id_elem_matched; // 4 bytes
+            ID          id_data_matched; // 4 bytes
+            QuadNodePtr ptr_node_matched; // 4 bytes
 
             float min_dist2_;
             float min_dist_;
@@ -161,15 +158,24 @@ namespace PointerBased{
 
     public:
         Quadtree(float x_min, float x_max, float y_min, float y_max, 
+            ObjectPool<QuadNode>* objpool_node, ObjectPool<Elem>* objpool_elem,
             uint32_t max_depth, uint32_t max_elem_per_leaf,
             float approx_rate = 1.0, uint8_t flag_adj = false);
         ~Quadtree();
 
         void insert(float x, float y, int id_data);
+        // void NNSearch(float x, float y,
+        //     ID& id_data_matched, ID& id_node_matched);
+        // void cachedNNSearch(float x, float y, int id_node_cached, 
+        //     ID& id_data_matched, ID& id_node_matched);
+
+        // void NNSearchDebug(float x, float y, 
+        //     ID& id_data_matched, ID& id_node_matched, uint32_t& n_access);
+        // void cachedNNSearchDebug(float x, float y, int id_node_cached, 
+        //     ID& id_data_matched, ID& id_node_matched, uint32_t& n_access);
 
     // Related to generate tree.
     private:
-        void insertPrivate(ID id_node, uint8_t depth);
         void insertPrivateStack();
 
     private:
@@ -177,12 +183,15 @@ namespace PointerBased{
 
     private:
         // Stores all the elements in the quadtree.
-        std::vector<QuadElement>  all_elems_;
-        std::vector<QuadNodeElements> node_elements;
+        std::vector<ElemPtr>  elements_;
+        
+    private:
+        // Objectpool for nodes and elements
+        QuadNodePtr root_node_;
+        ObjectPool<QuadNode>* objpool_node_;
+        ObjectPool<Elem>*     objpool_elem_; 
 
     private:
-        std::vector<QuadNodePtr> nodes; // ptrs
-        uint32_t n_nodes_;
         uint32_t n_node_activated_;
 
         float x_normalizer_;
