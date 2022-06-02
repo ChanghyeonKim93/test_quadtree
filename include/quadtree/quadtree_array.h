@@ -73,7 +73,6 @@ namespace ArrayBased{
             // else, leaf node.
             uint8_t state; // 1 byte (-2 : unactivated, -1: branch, 0: leaf)
             int8_t  depth; // 1 byte
-            double a[42];
 
     #define STATE_UNACTIVATED 0b0000 // 0
     #define STATE_ACTIVATED   0b0001 // 1 (0b0001)
