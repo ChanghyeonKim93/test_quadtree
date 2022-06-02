@@ -6,10 +6,10 @@
 #include <random>
 #include <functional>
 
-#include "quadtree/quadtree_array.h"
+#include "quadtree/quadtree_array2.h"
 #include "timer.h"
 
-using namespace ArrayBased;
+using namespace ArrayBased2;
 
 int main() {
     std::mt19937 engine((unsigned int)time(NULL));
@@ -21,7 +21,7 @@ int main() {
     uint32_t max_depth         = 10;
     uint32_t max_elem_per_leaf = 20;
     float approx_rate = 1;
-    int n_pts = 90000;
+    int n_pts = 150000;
     int n_pts_q = 4000;
     
     std::vector<std::pair<float,float>> pts_data;
