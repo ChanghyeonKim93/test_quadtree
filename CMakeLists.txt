@@ -19,7 +19,9 @@ set(SRC ${SRC}
 
 # add_executable(test_max_elem        ${SRC} src/test_max_elem.cpp)
 # add_executable(test_moving_matching ${SRC} src/test_moving_matching.cpp)
-add_executable(test_max_depth       ${SRC} src/test_max_depth.cpp)
+add_executable(test_max_depth_array       ${SRC} src/test_max_depth_array.cpp)
+add_executable(test_max_depth_array2      ${SRC} src/test_max_depth_array2.cpp)
+add_executable(test_max_depth_pointer     ${SRC} src/test_max_depth_pointer.cpp)
 # add_executable(test_bit_interleave  ${SRC} src/test_bit_interleave.cpp)
 # add_executable(test_bitshift        ${SRC} src/test_bitshift.cpp)
 # target_link_libraries (test_quadtree ${OpenCV_LIBRARIES})

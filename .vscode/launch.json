@@ -8,7 +8,7 @@
             "name": "(gdb) Launch",
             "type": "cppdbg",
             "request": "launch",
-            "program": "${workspaceFolder}/build/test_max_depth",
+            "program": "${workspaceFolder}/build/test_max_depth_pointer",
             "args": [],
             "stopAtEntry": false,
             "cwd": "${workspaceFolder}",

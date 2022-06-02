@@ -9,6 +9,8 @@ namespace ArrayBased2{
     : max_depth_(max_depth), x_range_{x_min,x_max}, y_range_{y_min,y_max},
     n_node_activated_(1), max_elem_per_leaf_(max_elem_per_leaf)
     {
+        std::cout << "sizeof(QuadNode): "<< sizeof(Quadtree::QuadNode) << "Bytes" << std::endl;
+
         // Make nodes
         n_nodes_ = (std::pow(4,max_depth_+1)-1)/(4-1);
         nodes.resize(n_nodes_+1);
@@ -172,10 +174,7 @@ namespace ArrayBased2{
                 }
                 break;
             }
-
-        }
-
-        
+        }  
     };
 
     inline void Quadtree::addDataToNode(ID id_node, Elem* elem){

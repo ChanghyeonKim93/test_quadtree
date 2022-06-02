@@ -92,12 +92,6 @@ namespace ArrayBased2{
     #define STATE_BRANCH      0b0011 // 2 (0b0011)
     #define STATE_LEAF        0b0101 // 4 (0b0101)
 
-            QuadNode() : state(STATE_UNACTIVATED), depth(-1), elem(nullptr), n_elem(0) {};
-            friend std::ostream& operator<<(std::ostream& os, const QuadNode& c){
-                os << "count:[" << c.state <<"]";
-                return os;
-            };
-
     #define IS_UNACTIVATED(nd) ( (nd).state == 0b0000         )
     #define IS_ACTIVATED(nd)   ( (nd).state  & STATE_ACTIVATED)
     #define IS_BRANCH(nd)      ( (nd).state == STATE_BRANCH   )
@@ -107,6 +101,12 @@ namespace ArrayBased2{
     #define MAKE_ACTIVATE(nd)  ( (nd).state = STATE_ACTIVATED  )
     #define MAKE_BRANCH(nd)    { (nd).state = STATE_BRANCH; (nd).n_elem = 0; }
     #define MAKE_LEAF(nd)      ( (nd).state = STATE_LEAF       )
+
+            QuadNode() : state(STATE_UNACTIVATED), depth(-1), elem(nullptr), n_elem(0) {};
+            friend std::ostream& operator<<(std::ostream& os, const QuadNode& c){
+                os << "count:[" << c.state <<"]";
+                return os;
+            };
         }; 
 
 
@@ -162,6 +162,19 @@ namespace ArrayBased2{
             ID& id_data_matched, ID& id_node_matched, uint32_t& n_access);
         void cachedNNSearchDebug(float x, float y, int id_node_cached, 
             ID& id_data_matched, ID& id_node_matched, uint32_t& n_access);
+
+    // For insert a data
+    private:
+        InsertData insert_data_;
+        inline void resetInsertData();
+
+    // For nearest neighbor search algorithm
+    private:
+        QueryData query_data_;
+        SimpleStack<ID> simple_stack_;
+
+        inline void resetNNParameters();
+        inline void resetQueryData();
 
     // Related to generate tree.
     private:
@@ -223,18 +236,6 @@ namespace ArrayBased2{
         uint32_t max_depth_; // Quadtree maximum depth
         uint32_t max_elem_per_leaf_; // The maximum number of elements in the leaf. If maxdepth leaf, no limit to store elements.
 
-    // For insert a data
-    private:
-        InsertData insert_data_;
-        inline void resetInsertData();
-
-    // For nearest neighbor search algorithm
-    private:
-        QueryData query_data_;
-        SimpleStack<ID> simple_stack_;
-
-        inline void resetNNParameters();
-        inline void resetQueryData();
 
     };
 

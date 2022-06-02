@@ -31,6 +31,7 @@
 
 #define FIND_QUADRANT(x_,y_,qrect,sn,ew) {(ew) = (x_) > ((qrect.tl.x+qrect.br.x)>>1); (sn) = (y_) > ((qrect.tl.y+qrect.br.y)>>1);}
 
+#define GET_CHILD_INDEX(sn,ew) ( ((sn) << 1) + (ew) )
 
 // 
 #define DIV4_QUOTIENT(i)  ((i) >> 2)

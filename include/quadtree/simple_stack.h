@@ -23,13 +23,13 @@ public:
 	}
 	T top() {
 		if (!empty()) return *(values_ + (size_ - 1));
-		else return -1;
+		else throw std::runtime_error("[ERROR]: SimpleStack is something wrong");
 	}
     T topAndPop(){
         if (!empty()) {
             return *(values_ + (--size_));
         }
-		else return -1;
+		else throw std::runtime_error("[ERROR]: SimpleStack is something wrong");
     };
 	inline bool empty() { return (size_ < 1); }
 	// bool empty() { 

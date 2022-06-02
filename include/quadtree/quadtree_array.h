@@ -73,17 +73,12 @@ namespace ArrayBased{
             // else, leaf node.
             uint8_t state; // 1 byte (-2 : unactivated, -1: branch, 0: leaf)
             int8_t  depth; // 1 byte
+            double a[42];
 
     #define STATE_UNACTIVATED 0b0000 // 0
     #define STATE_ACTIVATED   0b0001 // 1 (0b0001)
     #define STATE_BRANCH      0b0011 // 2 (0b0011)
     #define STATE_LEAF        0b0101 // 4 (0b0101)
-
-            QuadNode() : state(STATE_UNACTIVATED), depth(-1) {};
-            friend std::ostream& operator<<(std::ostream& os, const QuadNode& c){
-                os << "count:[" << c.state <<"]";
-                return os;
-            };
 
     #define IS_UNACTIVATED(nd) ( (nd).state == 0b0000         )
     #define IS_ACTIVATED(nd)   ( (nd).state  & STATE_ACTIVATED)
@@ -94,6 +89,12 @@ namespace ArrayBased{
     #define MAKE_ACTIVATE(nd)  ( (nd).state = STATE_ACTIVATED  )
     #define MAKE_BRANCH(nd)    ( (nd).state = STATE_BRANCH     )
     #define MAKE_LEAF(nd)      ( (nd).state = STATE_LEAF       )
+
+            QuadNode() : state(STATE_UNACTIVATED), depth(-1) {};
+            friend std::ostream& operator<<(std::ostream& os, const QuadNode& c){
+                os << "count:[" << c.state <<"]";
+                return os;
+            };
         }; 
 
         struct QuadElement{ // 12 bytes (actually 16 bytes)
