@@ -6,10 +6,10 @@
 #include <random>
 #include <functional>
 
-#include "quadtree/quadtree_array.h"
+#include "quadtree/quadtree_array2.h"
 #include "timer.h"
 
-using namespace ArrayBased;
+using namespace ArrayBased2;
 
 int main() {
     std::mt19937 engine((unsigned int)time(NULL));
@@ -18,17 +18,18 @@ int main() {
 
     float x_range[2] = {0.f,1032.f};
     float y_range[2] = {0.f,772.f};
+
     uint32_t max_depth         = 10;
     uint32_t max_elem_per_leaf = 20;
     float approx_rate = 1;
-    
-    int n_pts = 300000;
+    int n_pts = 90000;
+    int n_pts_q = 4000;
+
     std::vector<std::pair<float,float>> pts_data;
     for(uint32_t i = 0; i < n_pts; ++i){
         pts_data.push_back( std::make_pair<float,float>(generator(), generator()) );
     }
 
-    int n_pts_q = 2000;
     std::vector<std::pair<float,float>> pts_q;
     for(uint32_t i = 0; i < n_pts_q; ++i){
         pts_q.push_back(std::make_pair<float,float>(generator(), generator()));
@@ -82,7 +83,6 @@ int main() {
         std::vector<uint32_t> diff_normal(max_depth+1);
         std::vector<uint32_t> diff_cached(max_depth+1);
 
-
         for(int d = 0; d <= max_depth; ++d){
             timer::tic();
             std::shared_ptr<Quadtree> qt = nullptr;
@@ -129,14 +129,14 @@ int main() {
                 uint32_t id_mat = id_data_matched_q[i];
                 uint32_t id_mat_true = id_data_matched_q_true[i];
 
-                // if(id_mat != id_mat_true){
-                //     diff_normal[d]++;
-                //     std::cout << "mismatched: " << id_mat <<"," <<id_mat_true <<" / " 
-                //     << pts_data[id_mat].first <<"," << pts_data[id_mat].second
-                //     <<" / " << pts_data[id_mat_true].first <<"," <<pts_data[id_mat_true].second 
-                //     <<" / mindist2 (true,est):" << min_dist2_true[i] <<"," << 
-                //     DIST_EUCLIDEAN(pts_data[id_mat].first, pts_data[id_mat].second, pts_q[i].first, pts_q[i].second) << std::endl;
-                // } 
+                if(id_mat != id_mat_true){
+                    diff_normal[d]++;
+                    std::cout << "mismatched: " << id_mat <<"," <<id_mat_true <<" / " 
+                    << pts_data[id_mat].first <<"," << pts_data[id_mat].second
+                    <<" / " << pts_data[id_mat_true].first <<"," <<pts_data[id_mat_true].second 
+                    <<" / mindist2 (true,est):" << min_dist2_true[i] <<"," << 
+                    DIST_EUCLIDEAN(pts_data[id_mat].first, pts_data[id_mat].second, pts_q[i].first, pts_q[i].second) << std::endl;
+                } 
             }
 
             // Cached matching
@@ -155,14 +155,14 @@ int main() {
                 uint32_t id_mat = id_data_matched_q[i];
                 uint32_t id_mat_true = id_data_matched_q_true[i];
 
-                // if(id_mat != id_mat_true){
-                //     diff_cached[d]++;
-                //     std::cout << "mismatched: " << id_mat <<"," <<id_mat_true <<" / "
-                //     << pts_data[id_mat].first <<"," << pts_data[id_mat].second
-                //     <<" / " << pts_data[id_mat_true].first <<"," <<pts_data[id_mat_true].second 
-                //     <<" / mindist2 (true,est):" << min_dist2_true[i] <<"," << 
-                //     DIST_EUCLIDEAN(pts_data[id_mat].first, pts_data[id_mat].second, pts_q[i].first, pts_q[i].second) << std::endl;
-                // } 
+                if(id_mat != id_mat_true){
+                    diff_cached[d]++;
+                    std::cout << "mismatched: " << id_mat <<"," <<id_mat_true <<" / "
+                    << pts_data[id_mat].first <<"," << pts_data[id_mat].second
+                    <<" / " << pts_data[id_mat_true].first <<"," <<pts_data[id_mat_true].second 
+                    <<" / mindist2 (true,est):" << min_dist2_true[i] <<"," << 
+                    DIST_EUCLIDEAN(pts_data[id_mat].first, pts_data[id_mat].second, pts_q[i].first, pts_q[i].second) << std::endl;
+                } 
             }
             std::sort(accesses.begin(),accesses.end());
             min_access_cached[d] = accesses.front();

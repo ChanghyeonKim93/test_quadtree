@@ -20,7 +20,9 @@ namespace PointerBased{
         root_node_ = new QuadNode();
         root_node_->depth = 0;
         MAKE_LEAF_P(root_node_);
-        // nodes_.push_back(root_node_);
+
+        root_node_->id_elemptrs = vector_elemptrs_.size();
+        vector_elemptrs_.push_back(ElemPtrs());
 
         // Root size.
         QuadUint br_x = 1 << 15;
@@ -135,20 +137,13 @@ namespace PointerBased{
                         n_node_activated_ += 4;
 
                         // Do divide
-                        ElemPtr elem_tmp = ptr_node->head;
-                        while(elem_tmp != nullptr){
-                            ElemPtr elem_next = elem_tmp->next;
-
-                            elem_tmp->next = nullptr;
-
+                        for(ElemPtr const& elem_tmp : vector_elemptrs_[ptr_node->id_elemptrs].elems){
                             Flag flag_sn, flag_ew;
                             FIND_QUADRANT(elem_tmp->x_nom, elem_tmp->y_nom, ptr_node->rect, flag_sn, flag_ew);
                             uint8_t idx_child = GET_CHILD_INDEX(flag_sn, flag_ew);
 
                             addDataToNode(ptr_node->first_child + idx_child, elem_tmp);
-                            elem_tmp = elem_next;
                         }
-
                         // make this node as a branch
                         makeBranch(ptr_node);
                     }
@@ -189,31 +184,19 @@ namespace PointerBased{
     }
      
     inline void Quadtree::addDataToNode(QuadNodePtr ptr_node, ElemPtr elem){
-        elem->next           = nullptr;
-        if(ptr_node->head != nullptr) { // not empty
-            ptr_node->tail->next = elem;
-            ptr_node->tail       = elem;
-        }
-        else { // empty list
-            ptr_node->head = elem;
-            ptr_node->tail = elem;
-        }
-        ++ptr_node->n_elem;
+        vector_elemptrs_[ptr_node->id_elemptrs].elems.push_back(elem);
     };
 
     bool Quadtree::findNearestElem(float x, float y, QuadNodePtr ptr_node){
         bool findNewNearest = false;
-        ElemPtr elem = ptr_node->head;
-        while(elem != nullptr){
+        for(ElemPtr const& elem : vector_elemptrs_[ptr_node->id_elemptrs].elems){
             float dist_temp = DIST_EUCLIDEAN(x,y, elem->x_nom, elem->y_nom);
             if(dist_temp < query_data_.min_dist2_){
-                // std::cout << "min dist chaged: " << query_data_.min_dist2_ <<"," <<dist_temp<<std::endl;
                 this->query_data_.id_data_matched = elem->id_data;
                 this->query_data_.min_dist2_      = dist_temp * params_.approx_rate;
                 this->query_data_.min_dist_       = sqrt(query_data_.min_dist2_);
                 findNewNearest  = true;
             }
-            elem = elem->next;
         }
         return findNewNearest;
     };
@@ -234,7 +217,7 @@ namespace PointerBased{
     };
 
     inline int Quadtree::getNumElemOfNode(QuadNodePtr ptr_node){
-        return ptr_node->n_elem;
+        return vector_elemptrs_[ptr_node->id_elemptrs].elems.size();
     };
 
     inline void Quadtree::makeChildrenLeaves(QuadNodePtr ptr_parent){
@@ -257,6 +240,8 @@ namespace PointerBased{
         ptr_child->rect.br.x = cent_x;    ptr_child->rect.br.y = cent_y;
         ptr_child->parent = ptr_parent;
         ptr_child->depth = ptr_parent->depth + 1;
+        ptr_child->id_elemptrs = vector_elemptrs_.size();
+        vector_elemptrs_.push_back(ElemPtrs());
 
         (++ptr_child)->reset();// (0,1) (top right)
         MAKE_LEAF_P(ptr_child); 
@@ -264,6 +249,9 @@ namespace PointerBased{
         ptr_child->rect.br.x = rect.br.x; ptr_child->rect.br.y = cent_y;
         ptr_child->parent = ptr_parent;
         ptr_child->depth = ptr_parent->depth + 1;
+        ptr_child->id_elemptrs = vector_elemptrs_.size();
+        vector_elemptrs_.push_back(ElemPtrs());
+
 
         (++ptr_child)->reset(); // (1,0) (bot left)
         MAKE_LEAF_P(ptr_child);
@@ -271,6 +259,9 @@ namespace PointerBased{
         ptr_child->rect.br.x = cent_x;    ptr_child->rect.br.y = rect.br.y;
         ptr_child->parent = ptr_parent;
         ptr_child->depth = ptr_parent->depth + 1;
+        ptr_child->id_elemptrs = vector_elemptrs_.size();
+        vector_elemptrs_.push_back(ElemPtrs());
+
 
         (++ptr_child)->reset(); // (1,1) (bot right)
         MAKE_LEAF_P(ptr_child);
@@ -278,6 +269,8 @@ namespace PointerBased{
         ptr_child->rect.br.x = rect.br.x; ptr_child->rect.br.y = rect.br.y;
         ptr_child->parent = ptr_parent;
         ptr_child->depth = ptr_parent->depth + 1;
+        ptr_child->id_elemptrs = vector_elemptrs_.size();
+        vector_elemptrs_.push_back(ElemPtrs());
     };
 
     void Quadtree::nearestNeighborSearchPrivate(){
@@ -444,18 +437,11 @@ namespace PointerBased{
 
     inline void Quadtree::makeBranch(QuadNodePtr ptr_node){
         MAKE_BRANCH_P(ptr_node);
-        ptr_node->head = nullptr;
-        ptr_node->tail = nullptr;
+        vector_elemptrs_[ptr_node->id_elemptrs].reset();
     };
 
     uint32_t Quadtree::getNumNodesActivated(){
         return n_node_activated_;
     };
 
-    void Quadtree::getAllElemRoot(){
-        ElemPtr elem_tmp = root_node_->head;
-        while(elem_tmp!=nullptr){
-            elem_tmp = elem_tmp->next;   
-        }
-    };
 };

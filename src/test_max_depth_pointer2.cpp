@@ -6,10 +6,10 @@
 #include <random>
 #include <functional>
 
-#include "quadtree/quadtree_pointer.h"
+#include "quadtree/quadtree_pointer2.h"
 #include "timer.h"
 
-using namespace PointerBased;
+using namespace PointerBased2;
 
 int main() {
     std::mt19937 engine((unsigned int)time(NULL));
@@ -20,11 +20,10 @@ int main() {
     float y_range[2] = {0.f,772.f};
     uint32_t max_depth         = 10;
     uint32_t max_elem_per_leaf = 20;
-    
-    int n_pts = 300000;
-    int n_pts_q = 2000;
     float approx_rate = 1;
-
+    int n_pts = 90000;
+    int n_pts_q = 4000;
+    
     std::vector<std::pair<float,float>> pts_data;
     for(uint32_t i = 0; i < n_pts; ++i){
         pts_data.push_back( std::make_pair<float,float>(generator(), generator()) );
@@ -63,10 +62,10 @@ int main() {
     }
 
     try{
-        std::shared_ptr<ObjectPool<PointerBased::QuadNode>> objpool_node;
-        std::shared_ptr<ObjectPool<PointerBased::Elem>>     objpool_elem;
-        objpool_node = std::make_shared<ObjectPool<PointerBased::QuadNode>>(16*100000); // 이만큼이 될 리가 ...?
-        objpool_elem = std::make_shared<ObjectPool<PointerBased::Elem>>(16*100000); // 
+        std::shared_ptr<ObjectPool<PointerBased2::QuadNode>> objpool_node;
+        std::shared_ptr<ObjectPool<PointerBased2::Elem>>     objpool_elem;
+        objpool_node = std::make_shared<ObjectPool<PointerBased2::QuadNode>>(16*100000); // 이만큼이 될 리가 ...?
+        objpool_elem = std::make_shared<ObjectPool<PointerBased2::Elem>>(16*100000); // 
         
 
         std::vector<float> time_construct(max_depth+1);

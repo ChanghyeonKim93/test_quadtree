@@ -77,25 +77,17 @@ namespace PointerBased2{
         };
     };
 
-    
-    struct ElemPtrs{ // 8 bytes
-        // Stores the ID for the element (can be used to refer to external data).
-        std::vector<ElemPtr> ptrs; // 8 bytes
-
-        ElemPtrs()  { ptrs.resize(0); };
-        inline void reset() { ptrs.resize(0); };
-        inline int getNumElem() const { return ptrs.size(); };
-    };
-
     struct QuadNode;
     typedef QuadNode* QuadNodePtr;
     struct QuadNode{ // 46 bytes
         QuadRect_u  rect; // 2 * 4 (8)
-        ID          id_elemptrs; // 4 
+        ElemPtr     head; // 8 bytes
+        ElemPtr     tail; // 8 bytes
         QuadNodePtr parent; // 8
         QuadNodePtr first_child; // 8
         uint8_t     state; // 1
         int8_t      depth; // 1
+        uint32_t    n_elem; // 4 byte 
 
 #define STATE_UNACTIVATED 0b0000 // 0
 #define STATE_ACTIVATED   0b0001 // 1 (0b0001)
@@ -229,9 +221,8 @@ namespace PointerBased2{
 
     private:
         // Stores all the elements in the quadtree.
-        std::vector<ElemPtr>      elements_;
+        std::vector<ElemPtr>  elements_;
         std::vector<QuadNodePtr>  nodes_;
-        std::vector<ElemPtrs>     vector_elemptrs_;
         
     private:
         // Objectpool for nodes and elements

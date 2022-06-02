@@ -20,14 +20,15 @@ int main() {
     float y_range[2] = {0.f,772.f};
     uint32_t max_depth         = 10;
     uint32_t max_elem_per_leaf = 20;
+    float approx_rate = 1;
+    int n_pts = 90000;
+    int n_pts_q = 4000;
     
-    int n_pts = 300000;
     std::vector<std::pair<float,float>> pts_data;
     for(uint32_t i = 0; i < n_pts; ++i){
         pts_data.push_back( std::make_pair<float,float>(generator(), generator()) );
     }
 
-    int n_pts_q = 2000;
     std::vector<std::pair<float,float>> pts_q;
     for(uint32_t i = 0; i < n_pts_q; ++i){
         pts_q.push_back(std::make_pair<float,float>(generator(), generator()));
@@ -87,7 +88,6 @@ int main() {
         std::vector<uint32_t> diff_normal(max_depth+1);
         std::vector<uint32_t> diff_cached(max_depth+1);
 
-        float approx_rate = 1;
 
         for(int d = 0; d <= max_depth; ++d){
             timer::tic();
