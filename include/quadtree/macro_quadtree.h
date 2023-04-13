@@ -6,7 +6,7 @@
 #define DIST_MANHATTAN(x,y,x_,y_) (abs((x)-(x_))+abs((y)-(y_)))
 
 // Bound check functions
-#define INBOUND_RECT(x,y,rect) (((x) > rect.tl.x && (x) < rect.br.x && (y) > rect.tl.y && (y) < rect.br.y))
+#define INBOUND_RECT(x,y,rect) (((x) > (rect).tl.x && (x) < (rect).br.x && (y) > (rect).tl.y && (y) < (rect).br.y))
 #define INBOUND_RECT_PTS(x,y,x_tl,y_tl,x_br,y_br) (((x) > (x_tl) && (x) < (x_br) && (y) > (y_tl) && (y) < (y_br)))
 
 // related to the quadtree node ID
@@ -29,7 +29,7 @@
 #define GET_CHILD_ID_INDEX(id_node,idx_child) (((id_node) << 2) - 2 + (idx_child))
 #define GET_MY_QUADRANT(id_node) (((id_node)+2) & 0b11)
 
-#define FIND_QUADRANT(x_,y_,qrect,sn,ew) {(ew) = (x_) > ((qrect.tl.x+qrect.br.x)>>1); (sn) = (y_) > ((qrect.tl.y+qrect.br.y)>>1);}
+#define FIND_QUADRANT(x_,y_,qrect,sn,ew) {(ew) = (x_) > (((qrect).tl.x+(qrect).br.x)>>1); (sn) = (y_) > (((qrect).tl.y+(qrect).br.y)>>1);}
 
 #define GET_CHILD_INDEX(sn,ew) ( ((sn) << 1) | (ew) )
 
