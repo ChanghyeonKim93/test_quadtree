@@ -60,14 +60,14 @@ public:
 
 	// related to the total access
 public:
-	uint32_t getTotalAccess() const { return total_access_; };
+	size_t getTotalAccess() const { return total_access_; };
 	void resetTotalAccess() { total_access_ = 0; };
 	void addTotalAccess() { ++total_access_; };
 
 private:
-	uint32_t size_;
-	uint32_t MAX_SIZE;
-	uint32_t total_access_;
+	size_t size_;
+	size_t MAX_SIZE;
+	size_t total_access_;
 	T *values_;
 };
 #endif

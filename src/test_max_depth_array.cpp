@@ -19,47 +19,47 @@ int main() {
     float x_range[2] = {0.f,1032.f};
     float y_range[2] = {0.f,772.f};
 
-    uint32_t max_depth         = 10;
-    uint32_t max_elem_per_leaf = 20;
-    float approx_rate = 1;
+    size_t max_depth         = 7;
+    size_t max_elem_per_leaf = 20;
+    float approx_rate = 1.0;
     int n_pts = 150000;
     int n_pts_q = 4000;
 
     std::vector<std::pair<float,float>> pts_data;
-    for(uint32_t i = 0; i < n_pts; ++i){
+    for(size_t i = 0; i < n_pts; ++i){
         pts_data.push_back( std::make_pair<float,float>(generator(), generator()) );
     }
 
     std::vector<std::pair<float,float>> pts_q;
-    for(uint32_t i = 0; i < n_pts_q; ++i){
+    for(size_t i = 0; i < n_pts_q; ++i){
         pts_q.push_back(std::make_pair<float,float>(generator(), generator()));
     }
 
-    std::vector<uint32_t> id_node_matched_q;
-    std::vector<uint32_t> id_data_matched_q;
+    std::vector<size_t> id_node_matched_q;
+    std::vector<size_t> id_point_matched_q;
     id_node_matched_q.resize(n_pts_q);
-    id_data_matched_q.resize(n_pts_q);
+    id_point_matched_q.resize(n_pts_q);
 
     std::vector<double> min_dist2_true;
-    std::vector<uint32_t> id_data_matched_q_true;
+    std::vector<size_t> id_point_matched_q_true;
     min_dist2_true.resize(n_pts_q);
-    id_data_matched_q_true.resize(n_pts_q);
+    id_point_matched_q_true.resize(n_pts_q);
 
-    for(uint32_t i = 0; i < n_pts_q; ++i){
+    for(size_t i = 0; i < n_pts_q; ++i){
         double min_dist2 = std::numeric_limits<double>::max();
-        uint32_t id_data_tmp = 0;
-        for(uint32_t j = 0; j < n_pts; ++j){
+        size_t id_point_tmp = 0;
+        for(size_t j = 0; j < n_pts; ++j){
             double dist = DIST_EUCLIDEAN(pts_q[i].first, pts_q[i].second, 
                 pts_data[j].first, pts_data[j].second);
 
             if( dist < min_dist2){
-                id_data_tmp = j;
+                id_point_tmp = j;
                 min_dist2   = dist;
             }
         }
 
         min_dist2_true[i]         = min_dist2;
-        id_data_matched_q_true[i] = id_data_tmp;
+        id_point_matched_q_true[i] = id_point_tmp;
     }
 
     try{
@@ -68,20 +68,20 @@ int main() {
 
         std::vector<float> time_normal(max_depth+1);
         std::vector<float> time_cached(max_depth+1);
-        std::vector<uint32_t> access_normal(max_depth+1);
+        std::vector<size_t> access_normal(max_depth+1);
         std::vector<double> min_access_normal(max_depth+1);
         std::vector<double> max_access_normal(max_depth+1);
         std::vector<double> avg_access_normal(max_depth+1);
         std::vector<double> std_access_normal(max_depth+1);
 
-        std::vector<uint32_t> access_cached(max_depth+1);
+        std::vector<size_t> access_cached(max_depth+1);
         std::vector<double> min_access_cached(max_depth+1);
         std::vector<double> max_access_cached(max_depth+1);
         std::vector<double> avg_access_cached(max_depth+1);
         std::vector<double> std_access_cached(max_depth+1);
 
-        std::vector<uint32_t> diff_normal(max_depth+1);
-        std::vector<uint32_t> diff_cached(max_depth+1);
+        std::vector<size_t> diff_normal(max_depth+1);
+        std::vector<size_t> diff_cached(max_depth+1);
 
         for(int d = 0; d <= max_depth; ++d){
             timer::tic();
@@ -93,24 +93,23 @@ int main() {
 
             // Insert points
             timer::tic();
-            for(uint32_t i = 0; i < n_pts; ++i){
-                ID id_data = i;
-                qt->insert(pts_data[i].first, pts_data[i].second, id_data);
+            for(size_t i = 0; i < n_pts; ++i){
+                qt->insert(pts_data[i].first, pts_data[i].second, i);
             }
 
             std::cout << "# nodes - total / activated / ratio: " 
-            << qt->getNumNodes() <<", " << qt->getNumNodesActivated() <<", " 
-            << (double)qt->getNumNodesActivated()/(double)qt->getNumNodes()*100.0 << " % " << std::endl;
+            << qt->getNumNodesTotal() <<", " << qt->getNumNodesActivated() <<", " 
+            << (double)qt->getNumNodesActivated()/(double)qt->getNumNodesTotal()*100.0 << " % " << std::endl;
 
             time_insert[d] = timer::toc(0);
 
             // normal matching
-            std::vector<uint32_t> accesses;
+            std::vector<size_t> accesses;
             timer::tic();
-            for(uint32_t i = 0; i < n_pts_q; ++i){
-                uint32_t access_temp = 0;
+            for(size_t i = 0; i < n_pts_q; ++i){
+                size_t access_temp = 0;
                 qt->NNSearchDebug(pts_q[i].first, pts_q[i].second, 
-                    id_data_matched_q[i], id_node_matched_q[i], access_temp);
+                    id_point_matched_q[i], id_node_matched_q[i], access_temp);
                 access_normal[d] += access_temp;
                 accesses.push_back(access_temp);
             }
@@ -126,8 +125,8 @@ int main() {
             std_access_normal[d] = stdev;
             
             for(int i = 0; i < n_pts_q; ++i){
-                uint32_t id_mat = id_data_matched_q[i];
-                uint32_t id_mat_true = id_data_matched_q_true[i];
+                const size_t& id_mat = id_point_matched_q[i];
+                const size_t& id_mat_true = id_point_matched_q_true[i];
 
                 if(id_mat != id_mat_true){
                     diff_normal[d]++;
@@ -143,17 +142,17 @@ int main() {
             accesses.resize(0);
             timer::tic();
             for(int i = 0; i < n_pts_q; ++i){
-                uint32_t access_temp = 0;
+                size_t access_temp = 0;
                 qt->cachedNNSearchDebug(pts_q[i].first, pts_q[i].second, id_node_matched_q[i],
-                    id_data_matched_q[i], id_node_matched_q[i], access_temp);
+                    id_point_matched_q[i], id_node_matched_q[i], access_temp);
                 access_cached[d] += access_temp;
                 accesses.push_back(access_temp);
             }
             time_cached[d] = timer::toc(0);
             
             for(int i = 0; i < n_pts_q; ++i){
-                uint32_t id_mat = id_data_matched_q[i];
-                uint32_t id_mat_true = id_data_matched_q_true[i];
+                size_t id_mat = id_point_matched_q[i];
+                size_t id_mat_true = id_point_matched_q_true[i];
 
                 if(id_mat != id_mat_true){
                     diff_cached[d]++;
@@ -184,7 +183,7 @@ int main() {
             <<"NN search (normal/cached): " << time_normal[d] <<", " << time_cached[d] <<"\n";
         }
         std::cout << "==== ACCESS ANALYSIS ====\n";
-        for(int d = 0; d < max_depth; ++d){
+        for(int d = 0; d <= max_depth; ++d){
             std::cout << " d[" << d <<"] - (normal/cached)" 
             << "total: " << access_normal[d] <<", " << access_cached[d] <<" / "
             << "min: " << min_access_normal[d] <<"," << min_access_cached[d] <<" / "
