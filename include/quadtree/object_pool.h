@@ -10,12 +10,13 @@ class ObjectPool
 public:
     ObjectPool(uint32_t max_num_object) : max_num_object_(max_num_object)
     {
-        memory_chunk_ = (T *)malloc(sizeof(T) * max_num_object);
+        size_of_obj_ = sizeof(T);
+        memory_chunk_ = (T *)malloc(size_of_obj_ * max_num_object);
         for (uint32_t i = 0; i < max_num_object_; ++i)
             obj_queue_.push(memory_chunk_ + i);
 
         printf("object size: %ld / allocated # of objects: %ld / total memory consumption: %ld [Mbytes]\n",
-               sizeof(T), obj_queue_.size(), (sizeof(T) * obj_queue_.size()) / (1024 * 1024));
+               size_of_obj_, obj_queue_.size(), (size_of_obj_ * obj_queue_.size()) / (1024 * 1024));
     }
 
     T *getObject()
@@ -79,6 +80,7 @@ private:
     T *memory_chunk_;
     std::queue<T *> obj_queue_;
     uint32_t max_num_object_;
+    size_t size_of_obj_;
 };
 
 #endif
