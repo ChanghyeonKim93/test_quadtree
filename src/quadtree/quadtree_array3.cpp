@@ -210,6 +210,7 @@ namespace ArrayBased3
     {
         // Initialize values
         simple_stack_.clear();
+        simple_stack_.clearTotalAccess();
         query_data_.min_dist2_ = std::numeric_limits<float>::max();
         query_data_.min_dist_ = std::numeric_limits<float>::max();
     }
@@ -275,6 +276,7 @@ namespace ArrayBased3
                 }
             }
         }
+        simple_stack_.clear();
     }
 
     bool Quadtree::findNearestElem(float x, float y, const NodeBin &elems_thisnode)
@@ -393,6 +395,7 @@ namespace ArrayBased3
                     }
                 }
             }
+            simple_stack_.clear();
         }
     }
 

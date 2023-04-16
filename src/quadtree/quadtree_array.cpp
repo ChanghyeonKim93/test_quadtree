@@ -211,6 +211,7 @@ namespace ArrayBased
     {
         // Initialize values
         simple_stack_.clear();
+        simple_stack_.clearTotalAccess();
         query_data_.min_dist2_ = std::numeric_limits<float>::max();
         query_data_.min_dist_ = std::numeric_limits<float>::max();
     }

@@ -55,7 +55,6 @@ public:
 	inline void clear()
 	{
 		size_ = 0;
-		total_access_ = 0;
 	}
 
 	// related to the total access
@@ -63,6 +62,7 @@ public:
 	size_t getTotalAccess() const { return total_access_; };
 	void resetTotalAccess() { total_access_ = 0; };
 	void addTotalAccess() { ++total_access_; };
+	inline void clearTotalAccess(){	total_access_ = 0; }
 
 private:
 	size_t size_;
