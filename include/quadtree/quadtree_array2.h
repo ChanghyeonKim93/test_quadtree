@@ -7,8 +7,8 @@
 #include "quadtree/macro_quadtree.h"
 
 namespace ArrayBased2{
-    typedef uint32_t ID; // 4 bytes
-    typedef uint8_t  Flag; // 1 bytes
+    using ID = uint32_t; // 4 bytes
+    using Flag = uint8_t; // 1 bytes
 
     class Quadtree{
     private:
@@ -57,9 +57,9 @@ namespace ArrayBased2{
             };
         };
 
-        typedef uint16_t QuadUint;
-        typedef QuadRect<QuadUint> QuadRect_u;
-        typedef QuadRect<float>    QuadRect_f;
+        using QuadUint = uint16_t;
+        using QuadRect_u = QuadRect<QuadUint>;
+        using QuadRect_f = QuadRect<float>;
 
         struct Elem{ // 20 bytes (actually 16 bytes)
             Elem* next;
@@ -108,7 +108,6 @@ namespace ArrayBased2{
                 return os;
             };
         }; 
-
 
         struct InsertData{ // 12 bytes (actually 16 bytes)
             float x_nom;   // 4 bytes
@@ -228,16 +227,12 @@ namespace ArrayBased2{
         uint32_t getNumNodes();
         uint32_t getNumNodesActivated();
 
-
     private: 
         // quadtree range (in real scale)
         float x_range_[2]; float y_range_[2];
 
         uint32_t max_depth_; // Quadtree maximum depth
         uint32_t max_elem_per_leaf_; // The maximum number of elements in the leaf. If maxdepth leaf, no limit to store elements.
-
-
     };
-
 };
 #endif

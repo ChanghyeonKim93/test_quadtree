@@ -8,8 +8,8 @@
 #include "quadtree/object_pool.h"
 
 namespace PointerBased{
-    typedef uint32_t ID; // 4 bytes
-    typedef uint8_t  Flag; // 1 bytes
+    using ID = uint32_t; // 4 bytes
+    using Flag = uint8_t; // 1 bytes
     template <typename T>
     struct Pos2d{ // sizeof(T)*2 bytes
         T x;
@@ -54,12 +54,12 @@ namespace PointerBased{
         };
     };
 
-    typedef uint16_t QuadUint;
-    typedef QuadRect<QuadUint> QuadRect_u;
-    typedef QuadRect<float>    QuadRect_f;
+    using QuadUint = uint16_t;
+    using QuadRect_u = QuadRect<QuadUint>;
+    using QuadRect_f = QuadRect<float>;
 
     struct Elem;
-    typedef Elem* ElemPtr;
+    using ElemPtr = Elem*;
     struct Elem{ // 12 bytes
         float   x_nom;   // 4 bytes
         float   y_nom;   // 4 bytes
@@ -74,7 +74,6 @@ namespace PointerBased{
             id_data = id_data_;
         };
     };
-
     
     struct ElemPtrs{ // 8 bytes
         // Stores the ID for the element (can be used to refer to external data).
@@ -86,7 +85,7 @@ namespace PointerBased{
     };
 
     struct QuadNode;
-    typedef QuadNode* QuadNodePtr;
+    using QuadNodePtr = QuadNode*;
     struct QuadNode{ // 30 bytes
         QuadRect_u  rect; // 2 * 4 (8)
         ID          id_elemptrs; // 4 (If a new node incomes,)
