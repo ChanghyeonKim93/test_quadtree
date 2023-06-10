@@ -1,9 +1,9 @@
-#include "quadtree/quadtree_hash.h"
+#include "quadtree/quadtree_hash2.h"
 
-namespace HashBased
+namespace HashBased2
 {
   Quadtree::Quadtree(
-     float x_min, float x_max,
+    float x_min, float x_max,
     float y_min, float y_max,
     size_t max_depth, size_t max_elem_per_leaf,
     float approx_rate, uint8_t flag_adj)
@@ -13,23 +13,22 @@ namespace HashBased
     std::cout << "sizeof(Node): " << sizeof(Quadtree::Node) << std::endl;
     node_list_.reserve(10000);
     node_elem_id_list_.reserve(10000);
-    
+
     const uint32_t node_id_root = 1;
     const uint8_t depth_root = 0;
-    addNewNode(node_id_root, depth_root); // root node
 
     // Root size. (never goes to depth 14...)
     _numeric_uint br_x = std::numeric_limits<_numeric_uint>::max() >> 1;
     _numeric_uint br_y = std::numeric_limits<_numeric_uint>::max() >> 1;
     std::cout << "br_x, y: " << br_x << ", " << br_y << std::endl;
-    rect_root_.tl.x = 0;
-    rect_root_.tl.y = 0;
-    rect_root_.br.x = br_x;
-    rect_root_.br.y = br_y;
+    Rectangle<_numeric_uint> rect_root =
+      Rectangle<_numeric_uint>(Corner<_numeric_uint>(0, 0), Corner<_numeric_uint>(br_x, br_y));
+    
+    this->addNewNode(node_id_root, depth_root, rect_root); // root node
 
     // Calculate normalizers
-    float x_normalizer_ = static_cast<float>(rect_root_.br.x) / (x_range_[1] - x_range_[0]);
-    float y_normalizer_ = static_cast<float>(rect_root_.br.y) / (y_range_[1] - y_range_[0]);
+    float x_normalizer_ = static_cast<float>(rect_root.br.x) / (x_range_[1] - x_range_[0]);
+    float y_normalizer_ = static_cast<float>(rect_root.br.y) / (y_range_[1] - y_range_[0]);
 
     if (x_normalizer_ > y_normalizer_)
       normalizer_ = x_normalizer_;
@@ -46,7 +45,11 @@ namespace HashBased
 
     params_.flag_adj_search_only = flag_adj;
   }
-  Quadtree::~Quadtree(){ std::cout << "Quadtree is deleted.\n"; }
+
+  Quadtree::~Quadtree()
+  { 
+    std::cout << "Quadtree is deleted.\n"; 
+  }
   
   void Quadtree::insert(float x, float y, int id_point)
   {
@@ -69,11 +72,11 @@ namespace HashBased
   void Quadtree::insertPrivateStack(const float x_nom, const float y_nom, const ID id_elem)
   {
     ID node_id_to_visit = 1;
-    Rectangle rect_to_visit = rect_root_;
 
     while (true)
     {
       const Node &node = node_list_.at(node_id_to_visit); // current node.
+      const Rectangle<uint16_t>& rect_to_visit = node_list_[node_id_to_visit].getRect();
       const uint8_t depth = node.getDepth();
 
       if (node.isBranch())
@@ -84,11 +87,10 @@ namespace HashBased
         ID child_id = GET_CHILD_ID_FLAGS(node_id_to_visit, flag_sn, flag_ew);
 
         if(node_list_.count(child_id) == 0){
-          this->addNewNode(child_id, depth + 1);
+          this->addNewNode(child_id, depth + 1, this->getSubRectangle(rect_to_visit, flag_sn, flag_ew));
         }
 
         node_id_to_visit = child_id;
-        rect_to_visit = this->getSubRectangle(rect_to_visit, flag_sn, flag_ew);
       }
       else if (node.isLeaf())
       {
@@ -111,7 +113,7 @@ namespace HashBased
               FIND_QUADRANT(elem.x_nom, elem.y_nom, rect_to_visit, flag_sn, flag_ew);
               ID child_id = GET_CHILD_ID_FLAGS(node_id_to_visit, flag_sn, flag_ew);
               if(node_elem_id_list_.count(child_id) == 0){
-                this->addNewNode(child_id, depth + 1);
+                this->addNewNode(child_id, depth + 1, this->getSubRectangle(rect_to_visit, flag_sn, flag_ew));
               }
               this->addDataToNode(child_id, elem_id);
             }
@@ -128,12 +130,15 @@ namespace HashBased
     }
   }
 
-  void Quadtree::addNewNode(const uint32_t node_id, const uint8_t depth)
+  void Quadtree::addNewNode(const uint32_t node_id, const uint8_t depth, const Rectangle<uint16_t>& rect)
   {
-    node_list_[node_id] = Node();
     node_elem_id_list_[node_id] = std::vector<uint32_t>();
-    node_list_[node_id].setDepth(depth);
-    node_list_[node_id].makeLeaf();
+    node_elem_id_list_[node_id].reserve(max_elements_per_leaf_ + 10);
+    node_list_[node_id] = Node();
+    Node& node = node_list_[node_id];
+    node.setDepth(depth);
+    node.setRect(rect);
+    node.makeLeaf();
     ++this->n_nodes_activated_;
   }
 
@@ -163,16 +168,16 @@ namespace HashBased
 
   inline void Quadtree::addDataToNode(ID node_id, ID elem_id)
   {
-    node_elem_id_list_.at(node_id).push_back(elem_id);
+    node_elem_id_list_[node_id].push_back(elem_id);
   }
   
   inline size_t Quadtree::getNumElemOfNode(ID node_id)
   {
-    return node_elem_id_list_.at(node_id).size();
+    return node_elem_id_list_[node_id].size();
   }
 
   inline void Quadtree::makeBranch(ID node_id){
-    node_list_.at(node_id).makeBranch();
+    node_list_[node_id].makeBranch();
   }
 
   const size_t Quadtree::getNumNodesActivated() const

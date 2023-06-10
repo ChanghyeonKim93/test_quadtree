@@ -6,10 +6,10 @@
 #include <random>
 #include <functional>
 
-#include "quadtree/quadtree_hash.h"
+#include "quadtree/quadtree_hash2.h"
 #include "timer.h"
 
-using namespace HashBased;
+using namespace HashBased2;
 
 int main() {
   std::mt19937 engine((unsigned int)time(NULL));

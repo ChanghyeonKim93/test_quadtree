@@ -18,11 +18,11 @@ int main() {
 
     float x_range[2] = {0.f,1032.f};
     float y_range[2] = {0.f,772.f};
-    uint32_t max_depth         = 10;
+    uint32_t max_depth         = 7;
     uint32_t max_elem_per_leaf = 20;
     float approx_rate = 1;
-    int n_pts = 150000;
-    int n_pts_q = 4000;
+    int n_pts = 40000;
+    int n_pts_q = 30000;
     
     std::vector<std::pair<float,float>> pts_data;
     for(uint32_t i = 0; i < n_pts; ++i){

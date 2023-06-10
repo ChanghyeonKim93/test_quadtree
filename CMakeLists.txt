@@ -17,6 +17,7 @@ set(SRC ${SRC}
     src/quadtree/quadtree_pointer.cpp
     src/quadtree/quadtree_pointer2.cpp
     src/quadtree/quadtree_hash.cpp
+    src/quadtree/quadtree_hash2.cpp
     src/timer.cpp
 )
 
@@ -28,6 +29,7 @@ add_executable(test_max_depth_array3      ${SRC} src/test_max_depth_array3.cpp)
 add_executable(test_max_depth_pointer     ${SRC} src/test_max_depth_pointer.cpp)
 add_executable(test_max_depth_pointer2    ${SRC} src/test_max_depth_pointer2.cpp)
 add_executable(test_max_depth_hash        ${SRC} src/test_max_depth_hash.cpp)
+add_executable(test_max_depth_hash2        ${SRC} src/test_max_depth_hash2.cpp)
 
 
 add_executable(test_hash_based     ${SRC} src/test_hash_based.cpp)
