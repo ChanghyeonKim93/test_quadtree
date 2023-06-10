@@ -15,6 +15,7 @@ namespace ArrayBased3
         // Make nodes
         n_nodes_total_ = (std::pow(4, max_depth_ + 1) - 1) / (4 - 1);
         nodes_.resize(n_nodes_total_ + 1);
+        std::cout << "Max depth: " << max_depth_ << ", total bytes : " << (sizeof(Quadtree::Node) * n_nodes_total_ )/1024.0 << std::endl;
 
         // Initialize a root node.
         nodes_[1].makeLeaf();

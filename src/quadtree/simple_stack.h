@@ -1,6 +1,7 @@
 #ifndef _SIMPLE_STACK_H_
 #define _SIMPLE_STACK_H_
 #include <iostream>
+#include <memory>
 
 template <typename T>
 class SimpleStack
