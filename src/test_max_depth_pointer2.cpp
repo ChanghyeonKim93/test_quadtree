@@ -12,15 +12,16 @@
 using namespace PointerBased2;
 
 int main() {
-    std::mt19937 engine((unsigned int)time(NULL));
-    std::uniform_real_distribution<> distribution(30.0, 750.0);
+     std::mt19937 engine((unsigned int)time(NULL));
+    std::uniform_real_distribution<> distribution(50.0, 590.0);
     auto generator = std::bind(distribution, engine);
 
-    float x_range[2] = {0.f,1032.f};
-    float y_range[2] = {0.f,772.f};
-    uint32_t max_depth         = 7;
-    uint32_t max_elem_per_leaf = 20;
-    float approx_rate = 1;
+    float x_range[2] = {0.f,640.f};
+    float y_range[2] = {0.f,640.f};
+
+    size_t max_depth         = 7;
+    size_t max_elem_per_leaf = 20;
+    float approx_rate = 1.0;
     int n_pts = 40000;
     int n_pts_q = 30000;
     

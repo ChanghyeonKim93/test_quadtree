@@ -7,7 +7,7 @@
 #include "quadtree/simple_stack.h"
 #include "quadtree/object_pool.h"
 
-namespace PointerBased2{
+namespace PointerBased2 {
     using ID = uint32_t; // 4 bytes
     using Flag = uint8_t ; // 1 bytes
     template <typename T>
