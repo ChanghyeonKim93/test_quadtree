@@ -2,10 +2,12 @@
 
 namespace quadtree
 {
+  std::unique_ptr<ObjectPool<Node>> Quadtree::objpool_node_ = std::make_unique<ObjectPool<Node>>(500000);
+  std::unique_ptr<ObjectPool<LinkedElement>> Quadtree::objpool_elem_ = std::make_unique<ObjectPool<LinkedElement>>(3000000);
+
   Quadtree::Quadtree(
       const float x_min, const float x_max,
       const float y_min, const float y_max,
-      std::shared_ptr<ObjectPool<Node>> objpool_node, std::shared_ptr<ObjectPool<LinkedElement>> objpool_elem,
       uint32_t max_depth, uint32_t max_elem_per_leaf,
       const float distance_approximate_rate, uint8_t flag_adj)
       : max_depth_(max_depth), x_range_{x_min, x_max}, y_range_{y_min, y_max},
@@ -13,14 +15,10 @@ namespace quadtree
   {
     std::cout << "sizeof(QuadNode): " << sizeof(Node) << "Bytes" << std::endl;
 
-    objpool_node_ = objpool_node;
-    objpool_elem_ = objpool_elem;
-
     // Initialize a root node.
     root_node_ = new Node();
     root_node_->depth = 0;
-    MAKE_LEAF_P(root_node_);
-    // nodes_.push_back(root_node_);
+    root_node_->MakeThisLeaf();
 
     // Root size.
     QuadUint br_x = 1 << 15;
@@ -118,54 +116,54 @@ namespace quadtree
     float &x_nom = insert_data_.normalized_x;
     float &y_nom = insert_data_.normalized_y;
 
-    NodePtr node_ptr = root_node_;
-    node_ptr->depth = 0;
+    NodePtr node = root_node_;
+    node->depth = 0;
 
     while (true)
     {
-      const auto &depth = node_ptr->depth;
+      const auto &depth = node->depth;
 
-      if (IS_BRANCH_P(node_ptr))
+      if (node->IsBranch())
       {
         // Child cases of this branch: 1) not activated, 2) branch, 3) leaf
         Flag flag_sn, flag_ew;
-        FIND_QUADRANT(x_nom, y_nom, node_ptr->rect, flag_sn, flag_ew);
+        FIND_QUADRANT(x_nom, y_nom, node->rect, flag_sn, flag_ew);
         uint8_t child_index = GET_CHILD_INDEX(flag_sn, flag_ew);
 
-        node_ptr = node_ptr->first_child + child_index;
-        node_ptr->depth = depth + 1;
+        node = node->first_child + child_index;
+        node->depth = depth + 1;
       }
-      else if (IS_LEAF_P(node_ptr))
+      else if (node->IsLeaf())
       {
-        AddDataToNode(node_ptr, insert_data_.element_ptr);
+        AddDataToNode(node, insert_data_.element_ptr);
 
         if (depth < max_depth_)
         {
           // make all child to leaf (with no element)
-          const auto n_elem = GetNumElementInNode(node_ptr);
+          const auto n_elem = GetNumElementInNode(node);
           if (n_elem > max_elem_per_leaf_)
           {
-            MakeChildrenLeaves(node_ptr);
+            MakeChildrenAsLeaf(node);
             n_node_activated_ += 4;
 
             // Do divide
-            LinkedElementPtr elem_tmp = node_ptr->element_head;
-            while (elem_tmp != nullptr)
+            LinkedElementPtr element = node->element_head;
+            while (element != nullptr)
             {
-              LinkedElementPtr elem_next = elem_tmp->next;
+              LinkedElementPtr elem_next = element->next;
 
-              elem_tmp->next = nullptr;
+              element->next = nullptr;
 
               Flag flag_sn, flag_ew;
-              FIND_QUADRANT(elem_tmp->normalized_x, elem_tmp->normalized_y, node_ptr->rect, flag_sn, flag_ew);
+              FIND_QUADRANT(element->normalized_x, element->normalized_y, node->rect, flag_sn, flag_ew);
               uint8_t child_index = GET_CHILD_INDEX(flag_sn, flag_ew);
 
-              AddDataToNode(node_ptr->first_child + child_index, elem_tmp);
-              elem_tmp = elem_next;
+              AddDataToNode(node->first_child + child_index, element);
+              element = elem_next;
             }
 
             // make this node as a branch
-            MakeThisAsBranch(node_ptr);
+            MakeThisAsBranch(node);
           }
         }
         break;
@@ -198,7 +196,7 @@ namespace quadtree
   }
 
   void Quadtree::SearchNearestNeighborWithNodeCache_debug(
-      const float x, const float y, NodePtr cached_node_ptr,
+      const float x, const float y, const NodePtr cached_node_ptr,
       ID &matched_data_id, NodePtr &matched_node_ptr, uint32_t &num_node_access)
   {
     SearchNearestNeighborWithNodeCache(x, y, cached_node_ptr, matched_data_id, matched_node_ptr);
@@ -224,25 +222,25 @@ namespace quadtree
   bool Quadtree::FindNearestElement(const float x, const float y, NodePtr node_ptr)
   {
     bool is_new_nearest_found = false;
-    LinkedElementPtr elem = node_ptr->element_head;
-    while (elem != nullptr)
+    LinkedElementPtr element_ptr = node_ptr->element_head;
+    while (element_ptr != nullptr)
     {
-      float current_distance_squared = DIST_EUCLIDEAN(x, y, elem->normalized_x, elem->normalized_y);
+      float current_distance_squared = DIST_EUCLIDEAN(x, y, element_ptr->normalized_x, element_ptr->normalized_y);
       if (current_distance_squared < query_data_.min_distance_sqaured_)
       {
         // std::cout << "min dist chaged: " << query_data_.min_dist2_ <<"," <<dist_temp<<std::endl;
-        this->query_data_.matched_data_id = elem->data_id;
-        this->query_data_.min_distance_sqaured_ = current_distance_squared * parameters_.distance_approximate_rate;
-        this->query_data_.min_distance_ = std::sqrt(query_data_.min_distance_sqaured_);
+        query_data_.matched_data_id = element_ptr->data_id;
+        query_data_.min_distance_sqaured_ = current_distance_squared * parameters_.distance_approximate_rate;
+        query_data_.min_distance_ = std::sqrt(query_data_.min_distance_sqaured_);
         is_new_nearest_found = true;
       }
-      elem = elem->next;
+      element_ptr = element_ptr->next;
     }
     return is_new_nearest_found;
   }
 
   void Quadtree::SearchNearestNeighborWithNodeCache(
-      const float x, const float y, NodePtr cached_node_ptr,
+      const float x, const float y, const NodePtr cached_node_ptr,
       ID &matched_data_id, NodePtr &matched_node_ptr)
   {
     query_data_.x = x;
@@ -262,56 +260,57 @@ namespace quadtree
     return node_ptr->n_elem;
   }
 
-  inline void Quadtree::MakeChildrenLeaves(NodePtr ptr_parent)
+  inline void Quadtree::MakeChildrenAsLeaf(NodePtr parent_node)
   {
-    Rect_u &rect = ptr_parent->rect;
-    QuadUint center_x = (rect.tl.x + rect.br.x) >> 1;
-    QuadUint center_y = (rect.tl.y + rect.br.y) >> 1;
+    const auto &parent_rect = parent_node->rect;
+    const auto center_x = (parent_rect.tl.x + parent_rect.br.x) * 0.5f;
+    const auto center_y = (parent_rect.tl.y + parent_rect.br.y) * 0.5f;
 
     // Get four objects consecutive memories
-    ptr_parent->first_child = objpool_node_->GetObjectQuadruple();
-    node_ptr_list_.push_back(ptr_parent->first_child);
-    node_ptr_list_.push_back(ptr_parent->first_child + 1);
-    node_ptr_list_.push_back(ptr_parent->first_child + 2);
-    node_ptr_list_.push_back(ptr_parent->first_child + 3);
+    parent_node->first_child = objpool_node_->GetObjectQuadruple();
+    node_ptr_list_.push_back(parent_node->first_child);
+    node_ptr_list_.push_back(parent_node->first_child + 1);
+    node_ptr_list_.push_back(parent_node->first_child + 2);
+    node_ptr_list_.push_back(parent_node->first_child + 3);
 
-    NodePtr ptr_child = ptr_parent->first_child;
+    NodePtr ptr_child = parent_node->first_child;
+    const auto child_depth = parent_node->depth + 1;
 
     ptr_child->Reset(); // (0,0) (top left)
-    MAKE_LEAF_P(ptr_child);
-    ptr_child->rect.tl.x = rect.tl.x;
-    ptr_child->rect.tl.y = rect.tl.y;
+    ptr_child->MakeThisLeaf();
+    ptr_child->rect.tl.x = parent_rect.tl.x;
+    ptr_child->rect.tl.y = parent_rect.tl.y;
     ptr_child->rect.br.x = center_x;
     ptr_child->rect.br.y = center_y;
-    ptr_child->parent = ptr_parent;
-    ptr_child->depth = ptr_parent->depth + 1;
+    ptr_child->parent = parent_node;
+    ptr_child->depth = child_depth;
 
     (++ptr_child)->Reset(); // (0,1) (top right)
-    MAKE_LEAF_P(ptr_child);
+    ptr_child->MakeThisLeaf();
     ptr_child->rect.tl.x = center_x;
-    ptr_child->rect.tl.y = rect.tl.y;
-    ptr_child->rect.br.x = rect.br.x;
+    ptr_child->rect.tl.y = parent_rect.tl.y;
+    ptr_child->rect.br.x = parent_rect.br.x;
     ptr_child->rect.br.y = center_y;
-    ptr_child->parent = ptr_parent;
-    ptr_child->depth = ptr_parent->depth + 1;
+    ptr_child->parent = parent_node;
+    ptr_child->depth = child_depth;
 
     (++ptr_child)->Reset(); // (1,0) (bot left)
-    MAKE_LEAF_P(ptr_child);
-    ptr_child->rect.tl.x = rect.tl.x;
+    ptr_child->MakeThisLeaf();
+    ptr_child->rect.tl.x = parent_rect.tl.x;
     ptr_child->rect.tl.y = center_y;
     ptr_child->rect.br.x = center_x;
-    ptr_child->rect.br.y = rect.br.y;
-    ptr_child->parent = ptr_parent;
-    ptr_child->depth = ptr_parent->depth + 1;
+    ptr_child->rect.br.y = parent_rect.br.y;
+    ptr_child->parent = parent_node;
+    ptr_child->depth = child_depth;
 
     (++ptr_child)->Reset(); // (1,1) (bot right)
-    MAKE_LEAF_P(ptr_child);
+    ptr_child->MakeThisLeaf();
     ptr_child->rect.tl.x = center_x;
     ptr_child->rect.tl.y = center_y;
-    ptr_child->rect.br.x = rect.br.x;
-    ptr_child->rect.br.y = rect.br.y;
-    ptr_child->parent = ptr_parent;
-    ptr_child->depth = ptr_parent->depth + 1;
+    ptr_child->rect.br.x = parent_rect.br.x;
+    ptr_child->rect.br.y = parent_rect.br.y;
+    ptr_child->parent = parent_node;
+    ptr_child->depth = child_depth;
   }
 
   void Quadtree::SearchNearestNeighborPrivate()
@@ -333,7 +332,7 @@ namespace quadtree
 
       // If leaf node, find nearest point and 'BWBTest()'
       // if(nd.isLeaf()){
-      if (IS_LEAF_P(node_ptr))
+      if (node_ptr->IsLeaf())
       {
         simple_stack_.addTotalAccess();
         if (FindNearestElement(normalized_x, normalized_y, node_ptr))
@@ -348,22 +347,22 @@ namespace quadtree
 
         // Go to child. Find most probable child first.
         NodePtr ptr_child = node_ptr->first_child;
-        if (IS_ACTIVATED_P(ptr_child) && CheckBallOverlapBound(normalized_x, normalized_y, ptr_child->rect, query_data_.min_distance_))
+        if (ptr_child->IsActivated() && CheckBallOverlapBound(normalized_x, normalized_y, ptr_child->rect, query_data_.min_distance_))
         {
           simple_stack_.push(ptr_child);
         }
         ++ptr_child;
-        if (IS_ACTIVATED_P(ptr_child) && CheckBallOverlapBound(normalized_x, normalized_y, ptr_child->rect, query_data_.min_distance_))
+        if (ptr_child->IsActivated() && CheckBallOverlapBound(normalized_x, normalized_y, ptr_child->rect, query_data_.min_distance_))
         {
           simple_stack_.push(ptr_child);
         }
         ++ptr_child;
-        if (IS_ACTIVATED_P(ptr_child) && CheckBallOverlapBound(normalized_x, normalized_y, ptr_child->rect, query_data_.min_distance_))
+        if (ptr_child->IsActivated() && CheckBallOverlapBound(normalized_x, normalized_y, ptr_child->rect, query_data_.min_distance_))
         {
           simple_stack_.push(ptr_child);
         }
         ++ptr_child;
-        if (IS_ACTIVATED_P(ptr_child) && CheckBallOverlapBound(normalized_x, normalized_y, ptr_child->rect, query_data_.min_distance_))
+        if (ptr_child->IsActivated() && CheckBallOverlapBound(normalized_x, normalized_y, ptr_child->rect, query_data_.min_distance_))
         {
           simple_stack_.push(ptr_child);
         }
@@ -426,7 +425,7 @@ namespace quadtree
 
         // If leaf node, find nearest point and 'BWBTest()'
         // if(nd.isLeaf()){
-        if (IS_LEAF_P(node_ptr))
+        if (node_ptr->IsLeaf())
         {
           simple_stack_.addTotalAccess();
           if (FindNearestElement(normalized_x, normalized_y, node_ptr))
@@ -443,22 +442,22 @@ namespace quadtree
 
           // Go to child. Find most probable child first.
           NodePtr ptr_child = node_ptr->first_child;
-          if (IS_ACTIVATED_P(ptr_child) && CheckBallOverlapBound(normalized_x, normalized_y, ptr_child->rect, query_data_.min_distance_))
+          if (ptr_child->IsActivated() && CheckBallOverlapBound(normalized_x, normalized_y, ptr_child->rect, query_data_.min_distance_))
           {
             simple_stack_.push(ptr_child);
           }
           ++ptr_child;
-          if (IS_ACTIVATED_P(ptr_child) && CheckBallOverlapBound(normalized_x, normalized_y, ptr_child->rect, query_data_.min_distance_))
+          if (ptr_child->IsActivated() && CheckBallOverlapBound(normalized_x, normalized_y, ptr_child->rect, query_data_.min_distance_))
           {
             simple_stack_.push(ptr_child);
           }
           ++ptr_child;
-          if (IS_ACTIVATED_P(ptr_child) && CheckBallOverlapBound(normalized_x, normalized_y, ptr_child->rect, query_data_.min_distance_))
+          if (ptr_child->IsActivated() && CheckBallOverlapBound(normalized_x, normalized_y, ptr_child->rect, query_data_.min_distance_))
           {
             simple_stack_.push(ptr_child);
           }
           ++ptr_child;
-          if (IS_ACTIVATED_P(ptr_child) && CheckBallOverlapBound(normalized_x, normalized_y, ptr_child->rect, query_data_.min_distance_))
+          if (ptr_child->IsActivated() && CheckBallOverlapBound(normalized_x, normalized_y, ptr_child->rect, query_data_.min_distance_))
           {
             simple_stack_.push(ptr_child);
           }
@@ -502,7 +501,7 @@ namespace quadtree
 
   inline void Quadtree::MakeThisAsBranch(NodePtr node_ptr)
   {
-    MAKE_BRANCH_P(node_ptr);
+    node_ptr->MakeThisBranch();
     node_ptr->element_head = nullptr;
     node_ptr->element_tail = nullptr;
   }
@@ -514,10 +513,8 @@ namespace quadtree
 
   void Quadtree::GetAllElementInRoot()
   {
-    LinkedElementPtr elem_tmp = root_node_->element_head;
-    while (elem_tmp != nullptr)
-    {
-      elem_tmp = elem_tmp->next;
-    }
+    LinkedElementPtr element_ptr = root_node_->element_head;
+    while (element_ptr != nullptr)
+      element_ptr = element_ptr->next;
   }
 };

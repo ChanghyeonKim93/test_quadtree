@@ -108,28 +108,31 @@ namespace quadtree
 #define STATE_ACTIVATED 0b0001   // 1 (0b0001)
 #define STATE_BRANCH 0b0011      // 3 (0b0011)
 #define STATE_LEAF 0b0101        // 5 (0b0101)
-
-#define IS_UNACTIVATED_P(nd) ((nd)->state == 0b0000)
-#define IS_ACTIVATED_P(nd) ((nd)->state & STATE_ACTIVATED)
-#define IS_BRANCH_P(nd) ((nd)->state == STATE_BRANCH)
-#define IS_LEAF_P(nd) ((nd)->state == STATE_LEAF)
-
-#define MAKE_UNACTIVATE_P(nd)        \
-  {                                  \
-    (nd)->state = STATE_UNACTIVATED; \
-    (nd)->n_elem = 0;                \
-  }
-#define MAKE_ACTIVATE_P(nd) ((nd)->state = STATE_ACTIVATED)
-#define MAKE_BRANCH_P(nd)       \
-  {                             \
-    (nd)->state = STATE_BRANCH; \
-    (nd)->n_elem = 0;           \
-  }
-#define MAKE_LEAF_P(nd) ((nd)->state = STATE_LEAF)
+    inline void MakeThisActivated()
+    {
+      state = STATE_ACTIVATED;
+    }
+    inline void MakeThisUnactivated()
+    {
+      state = STATE_UNACTIVATED;
+      n_elem = 0;
+    }
+    inline void MakeThisBranch()
+    {
+      state = STATE_BRANCH;
+      n_elem = 0;
+    }
+    inline void MakeThisLeaf()
+    {
+      state = STATE_LEAF;
+    }
+    inline const bool IsActivated() const { return state & 0b0001; }
+    inline const bool IsBranch() const { return state == 0b0011; }
+    inline const bool IsLeaf() const { return state == 0b0101; }
 
     Node()
         : state(STATE_UNACTIVATED), element_head(nullptr), element_tail(nullptr),
-          depth(-1), parent(nullptr), first_child(nullptr), n_elem(0){};
+          depth(-1), parent(nullptr), first_child(nullptr), n_elem(0) {}
     friend std::ostream &operator<<(std::ostream &os, const Node &c)
     {
       os << "count:[" << c.state << "]";
@@ -196,7 +199,6 @@ namespace quadtree
   public:
     Quadtree(
         const float x_min, const float x_max, const float y_min, const float y_max,
-        std::shared_ptr<ObjectPool<Node>> objpool_node, std::shared_ptr<ObjectPool<LinkedElement>> objpool_elem,
         uint32_t max_depth, uint32_t max_elem_per_leaf,
         float approx_rate = 1.0, uint8_t flag_adj = false);
     ~Quadtree();
@@ -208,65 +210,58 @@ namespace quadtree
         const float x, const float y,
         ID &matched_data_id, NodePtr &matched_node_ptr);
     void SearchNearestNeighborWithNodeCache(
-        const float x, const float y, NodePtr cached_node_ptr,
+        const float x, const float y, const NodePtr cached_node_ptr,
         ID &matched_data_id, NodePtr &matched_node_ptr);
 
     void SearchNearestNeighbor_debug(
         const float x, const float y,
         ID &matched_data_id, NodePtr &matched_node_ptr, uint32_t &n_access);
     void SearchNearestNeighborWithNodeCache_debug(
-        const float x, const float y, NodePtr cached_node_ptr,
+        const float x, const float y, const NodePtr cached_node_ptr,
         ID &matched_data_id, NodePtr &matched_node_ptr, uint32_t &n_access);
 
-    // For insert a data
-  private:
-    InsertData insert_data_;
-    // inline void ResetInsertData();
+    uint32_t GetNumActivatedNodes();
+    void GetAllElementInRoot();
 
-    // For nearest neighbor search algorithm
-  private:
+  private: // For insert a data
+    InsertData insert_data_;
+
+  private: // For nearest neighbor search algorithm
     QueryData query_data_;
     SimpleStack<NodePtr> simple_stack_;
 
     inline void ResetNNParameters();
     inline void ResetQueryData();
 
-    // Related to generate tree.
-  private:
+  private: // Related to generate tree.
     void InsertPrivateStack();
 
-    inline void MakeChildrenLeaves(NodePtr ptr_parent);
+    inline void MakeChildrenAsLeaf(NodePtr ptr_parent);
 
-    inline void AddDataToNode(NodePtr ptr_node, LinkedElementPtr ptr_elem);
-    inline int GetNumElementInNode(NodePtr ptr_node);
+    inline void AddDataToNode(NodePtr node_ptr, LinkedElementPtr element_ptr);
+    inline int GetNumElementInNode(NodePtr node_ptr);
 
-    inline void MakeThisAsBranch(NodePtr ptr_node);
+    inline void MakeThisAsBranch(NodePtr node_ptr);
 
-    // Related to NN search (private)
-  private:
+  private: // Related to NN search (private)
     void SearchNearestNeighborPrivate();
 
     inline bool CheckBallWithinBound(const float x, const float y, const Rect_u &rect, const float radius);  // Ball Within Bound
     inline bool CheckBallOverlapBound(const float x, const float y, const Rect_u &rect, const float radius); // Ball Overlap Bound
-    bool FindNearestElement(const float x, const float y, NodePtr ptr_node);
+    bool FindNearestElement(const float x, const float y, NodePtr node_ptr);
 
-    // Related to cached NN search (private)
-  private:
+  private: // Related to cached NN search (private)
     void SearchNearestNeighborWithNodeCachePrivate();
 
   private:
     Parameters parameters_;
 
-  private:
-    // Stores all the elements in the quadtree.
+  private: // Stores all the elements in the quadtree.
     std::vector<LinkedElementPtr> element_ptr_list_;
     std::vector<NodePtr> node_ptr_list_;
 
-  private:
-    // Objectpool for nodes and elements
+  private: // Objectpool for nodes and elements
     NodePtr root_node_;
-    std::shared_ptr<ObjectPool<Node>> objpool_node_;
-    std::shared_ptr<ObjectPool<LinkedElement>> objpool_elem_;
 
   private:
     uint32_t n_node_activated_;
@@ -274,11 +269,7 @@ namespace quadtree
     float x_normalizer_;
     float y_normalizer_;
 
-  public:
-    uint32_t GetNumActivatedNodes();
-
-  private:
-    // quadtree range (in real scale)
+  private: // quadtree range (in real scale)
     float x_range_[2];
     float y_range_[2];
 
@@ -286,7 +277,8 @@ namespace quadtree
     uint32_t max_elem_per_leaf_; // The maximum number of elements in the leaf. If maxdepth leaf, no limit to store elements.
 
   public:
-    void GetAllElementInRoot();
+    static std::unique_ptr<ObjectPool<Node>> objpool_node_;
+    static std::unique_ptr<ObjectPool<LinkedElement>> objpool_elem_;
   };
 };
 #endif

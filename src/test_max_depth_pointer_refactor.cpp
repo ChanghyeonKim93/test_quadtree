@@ -20,11 +20,11 @@ int main()
   float x_range[2] = {0.f, 640.f};
   float y_range[2] = {0.f, 640.f};
 
-  int max_tree_depth = 7;
+  int max_tree_depth = 12;
   int max_num_element_in_leaf = 20;
   float approx_rate = 1.0;
-  int num_reference_point = 40000;
-  int num_query_point = 30000;
+  int num_reference_point = 10000;
+  int num_query_point = 1000;
 
   struct Pixel
   {
@@ -75,11 +75,6 @@ int main()
   matched_reference_id_list.resize(num_query_point);
   try
   {
-    std::shared_ptr<ObjectPool<quadtree::Node>> objpool_node;
-    std::shared_ptr<ObjectPool<quadtree::LinkedElement>> objpool_elem;
-    objpool_node = std::make_shared<ObjectPool<quadtree::Node>>(16 * 100000);          // 이만큼이 될 리가 ...?
-    objpool_elem = std::make_shared<ObjectPool<quadtree::LinkedElement>>(16 * 100000); //
-
     std::vector<float> time_construct(max_tree_depth + 1);
     std::vector<float> time_insert(max_tree_depth + 1);
 
@@ -106,7 +101,6 @@ int main()
       std::shared_ptr<Quadtree> quadtree = nullptr;
       quadtree = std::make_shared<Quadtree>(
           x_range[0], x_range[1], y_range[0], y_range[1],
-          objpool_node, objpool_elem,
           d, max_num_element_in_leaf,
           approx_rate);
       time_construct[d] = timer::toc(0);

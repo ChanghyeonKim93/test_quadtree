@@ -7,10 +7,10 @@ template <typename T>
 class SimpleStack
 {
 public:
-	SimpleStack() : MAX_SIZE(65536), size_(0), total_access_(0)
+	SimpleStack() : MAX_SIZE(100000), size_(0), total_access_(0)
 	{
 		values_ = (T *)malloc(sizeof(T) * MAX_SIZE); // 8 * max_size
-	};
+	}
 
 	~SimpleStack() { delete[] values_; }
 	void push(const T &value)
@@ -45,7 +45,7 @@ public:
 		}
 		else
 			throw std::runtime_error("[ERROR]: SimpleStack is something wrong");
-	};
+	}
 	inline bool empty() { return (size_ < 1); }
 	// bool empty() {
 	// 	if(size_ < 1 ) return true;
@@ -60,10 +60,10 @@ public:
 
 	// related to the total access
 public:
-	size_t getTotalAccess() const { return total_access_; };
-	void resetTotalAccess() { total_access_ = 0; };
-	void addTotalAccess() { ++total_access_; };
-	inline void clearTotalAccess(){	total_access_ = 0; }
+	size_t getTotalAccess() const { return total_access_; }
+	void resetTotalAccess() { total_access_ = 0; }
+	void addTotalAccess() { ++total_access_; }
+	inline void clearTotalAccess() { total_access_ = 0; }
 
 private:
 	size_t size_;

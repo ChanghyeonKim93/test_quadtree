@@ -8,23 +8,23 @@ template <typename T>
 class ObjectPool
 {
 public:
-  ObjectPool(uint32_t max_num_object) : max_num_object_(max_num_object)
+  ObjectPool(int max_num_object) : max_num_object_(max_num_object)
   {
-    size_of_obj_ = sizeof(T);
-    memory_chunk_ = (T *)malloc(size_of_obj_ * max_num_object);
-    for (uint32_t i = 0; i < max_num_object_; ++i)
-      obj_queue_.push(memory_chunk_ + i);
+    size_of_object_ = sizeof(T);
+    memory_chunk_ = (T *)malloc(size_of_object_ * max_num_object);
+    for (int i = 0; i < max_num_object_; ++i)
+      object_queue_.push(memory_chunk_ + i);
 
     printf("object size: %ld / allocated # of objects: %ld / total memory consumption: %ld [Mbytes]\n",
-           size_of_obj_, obj_queue_.size(), (size_of_obj_ * obj_queue_.size()) / (1024 * 1024));
+           size_of_object_, object_queue_.size(), (size_of_object_ * object_queue_.size()) / (1024 * 1024));
   }
 
   T *GetObject()
   {
-    if (!obj_queue_.empty())
+    if (!object_queue_.empty())
     {
-      T *ptr = obj_queue_.front();
-      obj_queue_.pop();
+      T *ptr = object_queue_.front();
+      object_queue_.pop();
       return ptr;
     }
     else
@@ -36,13 +36,13 @@ public:
 
   T *GetObjectQuadruple()
   {
-    if (!obj_queue_.empty())
+    if (!object_queue_.empty())
     {
-      T *ptr = obj_queue_.front();
-      obj_queue_.pop();
-      obj_queue_.pop();
-      obj_queue_.pop();
-      obj_queue_.pop();
+      T *ptr = object_queue_.front();
+      object_queue_.pop();
+      object_queue_.pop();
+      object_queue_.pop();
+      object_queue_.pop();
       return ptr;
     }
     else
@@ -54,7 +54,7 @@ public:
 
   void ReturnObject(T *ptr)
   {
-    obj_queue_.push(ptr);
+    object_queue_.push(ptr);
   }
 
   ~ObjectPool()
@@ -73,14 +73,14 @@ public:
 
   void ShowRemainingMemory()
   {
-    printf("remained mem: %ld\n", obj_queue_.size());
+    printf("remained mem: %ld\n", object_queue_.size());
   }
 
 private:
   T *memory_chunk_;
-  std::queue<T *> obj_queue_;
-  uint32_t max_num_object_;
-  size_t size_of_obj_;
+  std::queue<T *> object_queue_;
+  int max_num_object_;
+  size_t size_of_object_;
 };
 
 #endif
