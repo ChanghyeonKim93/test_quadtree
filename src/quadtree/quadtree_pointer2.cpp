@@ -49,10 +49,10 @@ namespace PointerBased2{
         delete root_node_;
         for(auto const& it : nodes_){
             it->reset();
-            objpool_node_->returnObject(it);
+            objpool_node_->ReturnObject(it);
         }
         for(auto const& it : elements_){
-            objpool_elem_->returnObject(it);
+            objpool_elem_->ReturnObject(it);
         }
         std::cout << "Quadtree is deleted.\n";
     }
@@ -88,7 +88,7 @@ namespace PointerBased2{
             float x_nom = x*x_normalizer_; float y_nom = y*y_normalizer_;
 
             // Add the input data as an Element object
-            ElemPtr elem_new = objpool_elem_->getObject();
+            ElemPtr elem_new = objpool_elem_->GetObject();
             elem_new->resetAndSetData(x_nom, y_nom, id_data);
 
             elements_.push_back(elem_new);
@@ -244,7 +244,7 @@ namespace PointerBased2{
         QuadUint cent_y = (rect.tl.y + rect.br.y) >> 1;
         
         // Get four objects consecutive memories
-        ptr_parent->first_child = objpool_node_->getObjectQuadruple();
+        ptr_parent->first_child = objpool_node_->GetObjectQuadruple();
         nodes_.push_back(ptr_parent->first_child   );
         nodes_.push_back(ptr_parent->first_child + 1);
         nodes_.push_back(ptr_parent->first_child + 2);

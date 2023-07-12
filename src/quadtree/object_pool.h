@@ -16,10 +16,10 @@ public:
       obj_queue_.push(memory_chunk_ + i);
 
     printf("object size: %ld / allocated # of objects: %ld / total memory consumption: %ld [Mbytes]\n",
-            size_of_obj_, obj_queue_.size(), (size_of_obj_ * obj_queue_.size()) / (1024 * 1024));
+           size_of_obj_, obj_queue_.size(), (size_of_obj_ * obj_queue_.size()) / (1024 * 1024));
   }
 
-  T *getObject()
+  T *GetObject()
   {
     if (!obj_queue_.empty())
     {
@@ -34,7 +34,7 @@ public:
     }
   }
 
-  T *getObjectQuadruple()
+  T *GetObjectQuadruple()
   {
     if (!obj_queue_.empty())
     {
@@ -52,7 +52,7 @@ public:
     }
   }
 
-  void returnObject(T *ptr)
+  void ReturnObject(T *ptr)
   {
     obj_queue_.push(ptr);
   }
@@ -63,7 +63,7 @@ public:
     {
       free(memory_chunk_);
       printf("ObjectPool - memory chunk [%f] MBytes in object pool is successfully returned.\n",
-              (double)(sizeof(T) * max_num_object_) / (1024.0 * 1024.0));
+             (double)(sizeof(T) * max_num_object_) / (1024.0 * 1024.0));
     }
     else
     {
@@ -71,7 +71,7 @@ public:
     }
   }
 
-  void showRemainingMemory()
+  void ShowRemainingMemory()
   {
     printf("remained mem: %ld\n", obj_queue_.size());
   }
